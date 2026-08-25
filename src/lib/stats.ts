@@ -287,6 +287,20 @@ export interface ProjectionPoint {
   ms: number;
 }
 
+export function trendPoints(trend: TrendFit | null, days: DayBucket[]): ProjectionPoint[] {
+  if (!trend || days.length === 0) return [];
+  const t0 = days[0].dayStartMs;
+  const tEnd = days[days.length - 1].dayStartMs;
+  const pts: ProjectionPoint[] = [];
+  const steps = 40;
+  for (let i = 0; i <= steps; i++) {
+    const t = t0 + ((tEnd - t0) / steps) * i;
+    const x = (t - t0) / 86400_000;
+    pts.push({ t, ms: trend.interceptMs + trend.slopeMsPerDay * x });
+  }
+  return pts;
+}
+
 export function projectForward(
   trend: TrendFit | null,
   lastDateMs: number,

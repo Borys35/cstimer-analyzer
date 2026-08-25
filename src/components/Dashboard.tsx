@@ -17,17 +17,14 @@ import { parseCstimerExport } from "@/lib/parser";
 import type { ParseResult, ParsedSession, PuzzleType } from "@/lib/types";
 import {
   analyze,
-  dailyBuckets,
   filterByRange,
   fmtTime,
-  projectForward,
-  rollingAverage,
   separateJunk,
-  weeklyBuckets,
   type BucketMode,
   type RangeKey,
 } from "@/lib/stats";
 import { buildCoachReport, projectionSentence } from "@/lib/coach";
+import { buildChartRows, type ChartRow } from "@/lib/chartData";
 
 const PUZZLE_TYPES: PuzzleType[] = [
   "2x2",
@@ -53,16 +50,6 @@ const TIER_COLOR: Record<string, string> = {
 
 function fmtDay(ms: number): string {
   return new Intl.DateTimeFormat("en-GB", { day: "2-digit", month: "short", timeZone: "UTC" }).format(ms);
-}
-
-interface ChartRow {
-  t: number;
-  raw?: number;
-  ao5?: number;
-  ao12?: number;
-  ao100?: number;
-  proj?: number;
-  vol?: number;
 }
 
 export default function Dashboard() {
@@ -127,47 +114,20 @@ export default function Dashboard() {
     const { kept, junk } = separateJunk(rangedAll);
     const clean = kept.filter((s) => !s.dnf);
 
-    const ao5 = rollingAverage(clean, 5);
-    const ao12 = rollingAverage(clean, 12);
-    const ao100 = rollingAverage(clean, 100);
-
-    const rows = new Map<number, ChartRow>();
-    const rowAt = (t: number): ChartRow => {
-      let r = rows.get(t);
-      if (!r) {
-        r = { t };
-        rows.set(t, r);
-      }
-      return r;
-    };
-    for (const s of kept) {
-      if (!s.dnf) rowAt(s.dateSec * 1000).raw = s.timeMs;
-    }
-    for (const p of ao5) rowAt(p.t).ao5 = p.ms;
-    for (const p of ao12) rowAt(p.t).ao12 = p.ms;
-    for (const p of ao100) rowAt(p.t).ao100 = p.ms;
-
-    const volBuckets = (
-      bucket === "day" ? dailyBuckets(clean) : weeklyBuckets(clean)
-    ).map((b) => ({ t: "dayStartMs" in b ? b.dayStartMs : b.weekStartMs, count: b.count }));
-    for (const b of volBuckets) {
-      rowAt(b.t).vol = b.count;
-    }
-
-    const chartRows = [...rows.values()].sort((a, b) => a.t - b.t);
-
     const analysis = analyze({
       rangedClean: clean,
       allClean: merged.filter((s) => !s.dnf),
       rangedAll: kept,
     });
     const lastT = clean.length ? clean[clean.length - 1].dateSec * 1000 : Date.now();
-    const projection = projectForward(analysis.trend, lastT, horizon);
-    const fullRows = [...chartRows];
-    for (const p of projection) {
-      if (!fullRows.some((r) => r.t === p.t)) fullRows.push({ t: p.t, proj: p.ms });
-    }
-    fullRows.sort((x, y) => x.t - y.t);
+    const chartRows = buildChartRows({
+      kept,
+      clean,
+      bucket,
+      trend: analysis.trend,
+      horizonWeeks: horizon,
+      lastDateMs: lastT,
+    });
 
     const report = buildCoachReport(analysis, selectedType);
     const projSentence = projectionSentence(analysis, horizon);
@@ -178,7 +138,7 @@ export default function Dashboard() {
       clean,
       junkCount: junk.length,
       dnfInRange: kept.length - clean.length,
-      chartRows: fullRows,
+      chartRows,
       analysis,
       report,
       projSentence,
@@ -357,7 +317,6 @@ export default function Dashboard() {
             />
             <YAxis
               yAxisId="time"
-              reversed
               domain={["auto", "auto"]}
               tickFormatter={(ms: number) => fmtTime(ms)}
               stroke="#71717a"
@@ -405,6 +364,15 @@ export default function Dashboard() {
             <Line
               yAxisId="time"
               type="linear"
+              dataKey="trend"
+              name="Trend"
+              stroke="#fbbf24"
+              dot={false}
+              strokeWidth={2}
+            />
+            <Line
+              yAxisId="time"
+              type="linear"
               dataKey="proj"
               name="Projection"
               stroke="#f87171"
@@ -415,7 +383,7 @@ export default function Dashboard() {
           </ComposedChart>
         </ResponsiveContainer>
         <p className="mt-1 text-center text-[11px] text-zinc-600">
-          vertical axis inverted — higher is faster
+          lower is better — fast times sit at the bottom
         </p>
       </section>
 
