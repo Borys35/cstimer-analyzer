@@ -212,8 +212,9 @@ export function frequencyScore(f: FrequencyResult): number {
     [0, 0],
     [2, 20],
     [5, 50],
-    [10, 85],
-    [11, 90],
+    [7, 70],
+    [10, 82],
+    [12, 90],
     [14, 100],
   ]);
   const volPart = piecewise(f.solvesPerActiveDay, [
@@ -245,9 +246,27 @@ export interface ScoredAnalysis {
   days: DayBucket[];
 }
 
-const W_IMPROVEMENT = 0.4;
-const W_CONSISTENCY = 0.3;
-const W_FREQUENCY = 0.3;
+export type LevelBand = "sub-60" | "sub-40" | "sub-25" | "sub-15" | "sub-10";
+
+export function bandFromMs(ms: number): LevelBand {
+  if (ms >= 60000) return "sub-60";
+  if (ms >= 40000) return "sub-40";
+  if (ms >= 25000) return "sub-25";
+  if (ms >= 15000) return "sub-15";
+  return "sub-10";
+}
+
+const LEVEL_WEIGHTS: Record<LevelBand, { i: number; c: number; f: number }> = {
+  "sub-60": { i: 0.45, c: 0.15, f: 0.40 },
+  "sub-40": { i: 0.40, c: 0.25, f: 0.35 },
+  "sub-25": { i: 0.35, c: 0.35, f: 0.30 },
+  "sub-15": { i: 0.30, c: 0.40, f: 0.30 },
+  "sub-10": { i: 0.25, c: 0.45, f: 0.30 },
+};
+
+export function levelWeights(levelMs: number): { i: number; c: number; f: number } {
+  return LEVEL_WEIGHTS[bandFromMs(levelMs)];
+}
 
 export function tierFor(score: number): ScoredAnalysis["tier"] {
   if (score >= 80) return "good";
@@ -297,9 +316,10 @@ export function analyze(input: AnalyzeInput): ScoredAnalysis {
   }
 
   let headline: number | null = null;
-  let tw = W_IMPROVEMENT * (improvement != null ? 1 : 0);
-  let cw = W_CONSISTENCY * (consistency != null ? 1 : 0);
-  let fw = W_FREQUENCY;
+  const w = currentLevelMs != null ? levelWeights(currentLevelMs) : { i: 0.35, c: 0.35, f: 0.30 };
+  let tw = w.i * (improvement != null ? 1 : 0);
+  let cw = w.c * (consistency != null ? 1 : 0);
+  let fw = w.f;
   const totalW = tw + cw + fw;
   if (totalW > 0) {
     const acc =
