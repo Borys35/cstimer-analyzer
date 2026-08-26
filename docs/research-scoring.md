@@ -208,3 +208,12 @@ trends, which keeps the scale strict at the top without punishing fast beginners
 24. SpeedSolving wiki, "Average" (Ao conventions, trimmed-mean definitions) — https://www.speedsolving.com/wiki/index.php/Average
 25. WCA Results Export (dataset reference) — https://www.worldcubeassociation.org/export/results
 26. r/Cubers, "At what point are you considered a 'fast' cuber?" (community wisdom) — https://www.reddit.com/r/Cubers/comments/16e85wg/at_what_point_are_you_considered_a_fast_cuber/
+
+## Appendix: CFOP phase-share references (added for split prescriptions)
+
+Coaching heuristics converge on Cross = 10-15%, F2L = 45-55%, full last layer (OLL+PLL) = 30-40% of total solve time. The implementation uses midpoints: cross 12%, F2L 50%, OLL 19%, PLL 19%.
+
+- CuberPal, "CFOP Solve Splits" (2026-07-21) - https://www.cuberpal.com/blog/cfop-solve-splits - states the ranges above, explicitly labeled "broad coaching heuristics, not published standards"; worked example at a 30s average shows F2L ~57% flagged as high.
+- SpeedSolving forum thread "CFOP breakdown percentage" - https://www.speedsolving.com/threads/cfop-breakdown-percentage.51030 - community convention example 10/60/15/15; individual self-reports vary widely (one sub-25 solver reported 20/30/25/25), confirming these are conventions rather than measured distributions.
+
+Confidence: LOW-to-MEDIUM. No large-N measured phase-share distribution is publicly available; the reference shares are convention-based and deliberately conservative (a phase must exceed its reference by more than 2 percentage points to be called out).

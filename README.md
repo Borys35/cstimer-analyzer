@@ -97,6 +97,20 @@ Why: self-reported improving cubers train roughly an hour most days (~20â€“100 s
 
 The three sub-scores are listed worst-first with targeted advice. The advice quotes your actual numbers (ms/week, CV%, active days) â€” it is harsh about facts, never invented insults.
 
+
+## Prescriptions
+
+The worst-scoring axis gets a full prescription: 2-3 specific drills, the rationale for each, and a recovery estimate computed from your own solves — never generic numbers:
+
+- **Consistency**: gap between your average and your best-quartile solves, plus the cost of excess spread ((CV - 10%) × mean)
+- **Splits** (3x3): your median cross/F2L/OLL/PLL time share vs coaching-reference shares (12/50/19/19%), converted to seconds at your level
+- **Improvement**: where your fitted trend lands in 8 weeks vs holding a -1%/week pace
+- **Frequency**: active days missing from the top band, translated into solves per fortnight
+
+Prescription selection is a deterministic matrix: level band (30s+ / 20–30s / 13–20s / sub-13) × weakest axis. Other events use one generic track per axis.
+
+Split analysis only counts clean, unpenalized solves carrying exactly three phase marks (cstimer multi-phase: Cross / F2L / OLL / PLL), needs =25 of them in range, and degrades gracefully — a hint tells you when to switch the timer's multi-phase mode on.
+
 ## Chart
 
 - **Grey dots** â€” individual clean solves

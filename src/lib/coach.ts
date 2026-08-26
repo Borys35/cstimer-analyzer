@@ -1,16 +1,20 @@
 import type { ScoredAnalysis } from "./stats";
 import { fmtTime } from "./stats";
+import { prescribe, weakestAxis, type Axis, type Prescription } from "./prescriptions";
+import type { SplitStats } from "./splits";
 
 export interface FocusItem {
-  area: "Improvement" | "Consistency" | "Frequency" | "Data";
+  area: Axis | "Data";
   score: number | null;
   text: string;
+  prescription?: Prescription;
 }
 
 export interface CoachReport {
   verdictTitle: string;
   verdictText: string;
   focus: FocusItem[];
+  splitHint: string | null;
 }
 
 const TIER_TITLES: Record<NonNullable<ScoredAnalysis["tier"]>, string> = {
@@ -67,7 +71,11 @@ function dataText(): string {
   return "Some scores are missing because the selected window is too thin. Widen the range or upload more history.";
 }
 
-export function buildCoachReport(a: ScoredAnalysis, puzzleLabel: string): CoachReport {
+export function buildCoachReport(
+  a: ScoredAnalysis,
+  puzzleLabel: string,
+  extras: { last50Times: number[]; splits: SplitStats; event: string },
+): CoachReport {
   const level = a.currentLevelMs != null ? fmtTime(a.currentLevelMs) : "unknown";
   let verdictText: string;
   switch (a.tier) {
@@ -97,8 +105,32 @@ export function buildCoachReport(a: ScoredAnalysis, puzzleLabel: string): CoachR
   }
   focus.sort((x, y) => (x.score ?? -1) - (y.score ?? -1));
 
+  const evidence = {
+    analysis: a,
+    last50Times: extras.last50Times,
+    splits: extras.splits,
+    event: extras.event,
+  };
+  const weak = weakestAxis(a);
+  for (const f of focus) {
+    if (f.area === weak && f.score != null) {
+      f.prescription = prescribe(weak, evidence);
+    } else if (f.area !== "Data" && f.score != null) {
+      const p2 = prescribe(f.area as Axis, evidence);
+      f.text += " " + p2.drills[0].name + ": " + p2.drills[0].why;
+    }
+  }
+
+  let splitHint: string | null = null;
+  if (extras.event === "3x3" && extras.splits.shares == null) {
+    splitHint =
+      extras.splits.usableCount > 0
+        ? `Only ${extras.splits.usableCount} solves carry cross/F2L/OLL/PLL phase marks (need ≥25). Enable cstimer's multi-phase timer and split-specific prescriptions unlock.`
+        : "No solves carry cross/F2L/OLL/PLL phase marks. Enable cstimer's multi-phase timer to unlock split-specific prescriptions.";
+  }
+
   const title = a.tier ? TIER_TITLES[a.tier] : "NO VERDICT YET";
-  return { verdictTitle: title, verdictText, focus };
+  return { verdictTitle: title, verdictText, focus, splitHint };
 }
 
 export function projectionSentence(a: ScoredAnalysis, horizonWeeks: number): string | null {

@@ -24,6 +24,7 @@ import {
   type RangeKey,
 } from "@/lib/stats";
 import { buildCoachReport, projectionSentence } from "@/lib/coach";
+import { analyzeSplits } from "@/lib/splits";
 import { buildChartRows, type ChartRow } from "@/lib/chartData";
 
 const PUZZLE_TYPES: PuzzleType[] = [
@@ -129,7 +130,13 @@ export default function Dashboard() {
       lastDateMs: lastT,
     });
 
-    const report = buildCoachReport(analysis, selectedType);
+    const last50Times = clean.slice(-50).map((s) => s.timeMs);
+    const splitStats = analyzeSplits(clean, analysis.currentLevelMs ?? 0);
+    const report = buildCoachReport(analysis, selectedType, {
+      last50Times,
+      splits: splitStats,
+      event: selectedType,
+    });
     const projSentence = projectionSentence(analysis, horizon);
 
     return {
@@ -423,11 +430,21 @@ export default function Dashboard() {
 
       <section className="mb-6 space-y-3">
         <h2 className="text-sm font-semibold uppercase tracking-wider text-zinc-400">
-          Where you are losing points — worst first
+          Where you are losing points — worst first, prescriptions included
         </h2>
-        {d.report.focus.map((f) => (
-          <div key={f.area} className="rounded-xl border border-zinc-800 bg-zinc-900/50 p-4">
-            <div className="mb-1 flex items-center gap-3">
+        {d.report.splitHint && (
+          <p className="rounded-lg border border-zinc-800 bg-zinc-900/30 px-4 py-2 text-xs text-zinc-500">
+            {d.report.splitHint}
+          </p>
+        )}
+        {d.report.focus.map((f, i) => (
+          <div
+            key={f.area}
+            className={`rounded-xl border bg-zinc-900/50 p-4 ${
+              f.prescription ? "border-amber-500/40" : "border-zinc-800"
+            }`}
+          >
+            <div className="mb-1 flex flex-wrap items-center gap-3">
               <span className="text-sm font-semibold text-zinc-200">{f.area}</span>
               {f.score != null && (
                 <span
@@ -440,8 +457,35 @@ export default function Dashboard() {
                   {f.score}/100
                 </span>
               )}
+              {i === 0 && f.prescription && (
+                <span className="rounded-full bg-amber-500/10 px-2 py-0.5 text-[11px] font-medium uppercase tracking-wide text-amber-400">
+                  weakest — full prescription
+                </span>
+              )}
             </div>
             <p className="text-sm leading-relaxed text-zinc-400">{f.text}</p>
+            {f.prescription && (
+              <div className="mt-3 space-y-3">
+                <p className="text-sm font-medium text-zinc-300">{f.prescription.diagnosis}</p>
+                <ol className="space-y-2">
+                  {f.prescription.drills.map((drill) => (
+                    <li key={drill.name} className="rounded-lg border border-zinc-800 bg-zinc-950/50 p-3">
+                      <div className="text-sm font-semibold text-zinc-100">{drill.name}</div>
+                      <div className="mt-0.5 text-xs leading-relaxed text-zinc-400">{drill.why}</div>
+                    </li>
+                  ))}
+                </ol>
+                {f.prescription.estimate && (
+                  <p className="rounded-md border border-emerald-500/20 bg-emerald-500/5 p-3 text-xs leading-relaxed text-emerald-200/90">
+                    <span className="font-semibold uppercase tracking-wide">The math:</span>{" "}
+                    {f.prescription.estimate}
+                    <span className="ml-2 rounded bg-zinc-800 px-1.5 py-0.5 text-[10px] uppercase text-zinc-400">
+                      {f.prescription.leverage} leverage
+                    </span>
+                  </p>
+                )}
+              </div>
+            )}
           </div>
         ))}
       </section>
