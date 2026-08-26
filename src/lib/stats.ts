@@ -154,11 +154,12 @@ export function improvementScore(trend: TrendFit | null, currentLevelMs: number)
   const pctPerWeek = (-trend.slopeMsPerDay * 7 * 100) / currentLevelMs;
   return piecewise(pctPerWeek, [
     [-5, 0],
-    [-1, 15],
-    [0, 40],
-    [0.5, 62],
+    [-0.5, 10],
+    [0, 22],
+    [0.3, 35],
+    [0.7, 60],
     [1.5, 85],
-    [3, 100],
+    [3, 96],
   ]);
 }
 
@@ -168,10 +169,12 @@ export function consistencyScore(last50: number[]): number | null {
   const variance = last50.reduce((a, b) => a + (b - mean) ** 2, 0) / last50.length;
   const cv = Math.sqrt(variance) / mean;
   return piecewise(cv, [
-    [0.1, 100],
-    [0.18, 75],
-    [0.25, 55],
-    [0.32, 30],
+    [0.04, 100],
+    [0.07, 90],
+    [0.09, 75],
+    [0.12, 55],
+    [0.15, 40],
+    [0.25, 20],
     [0.45, 0],
   ]);
 }
@@ -205,9 +208,23 @@ export function frequencyStats(allSolvesOfType: Solve[], nowMs = Date.now()): Fr
 }
 
 export function frequencyScore(f: FrequencyResult): number {
-  const dayPart = Math.min(1, f.activeDays / 8) * 70;
-  const volPart = Math.min(1, f.solvesPerActiveDay / 50) * 30;
-  return Math.round(dayPart + volPart);
+  const dayPart = piecewise(f.activeDays, [
+    [0, 0],
+    [2, 20],
+    [5, 50],
+    [10, 85],
+    [11, 90],
+    [14, 100],
+  ]);
+  const volPart = piecewise(f.solvesPerActiveDay, [
+    [0, 0],
+    [10, 30],
+    [20, 60],
+    [50, 90],
+    [100, 100],
+    [200, 100],
+  ]);
+  return Math.round(dayPart * 0.7 + volPart * 0.3);
 }
 
 export interface SubScores {

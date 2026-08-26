@@ -24,12 +24,16 @@ function improvementText(score: number | null, a: ScoredAnalysis): string {
   if (score == null || !a.trend)
     return "Not enough time-span in this range to establish a trend. Solve more, across more days, then come back.";
   const msPerWeek = a.trend.slopeMsPerDay * 7;
-  if (msPerWeek <= -50)
-    return `You are improving at ${fmtTime(Math.abs(msPerWeek))}/week. Whatever you are doing, keep doing it and add volume.`;
+  const pctPerWeek = a.currentLevelMs ? (-msPerWeek * 100) / a.currentLevelMs : 0;
+  if (msPerWeek <= -50) {
+    if (pctPerWeek > 3)
+      return `Improving ${pctPerWeek.toFixed(1)}%/week (${fmtTime(Math.abs(msPerWeek))}/week). Above 3%/week sustained is beginner territory or a fluke window; expect it to stall. Bank it while it lasts.`;
+    return `You are improving at ${fmtTime(Math.abs(msPerWeek))}/week (~${pctPerWeek.toFixed(1)}%/week). Long-run data says sustained −0.3 to −0.45%/week is realistic at your stage; anything above −1.5%/week for months puts you ahead of the curve. Keep doing what you are doing and add volume.`;
+  }
   if (msPerWeek < 0)
-    return `Improving, but slowly: ${fmtTime(Math.abs(msPerWeek))}/week. At this rate a 1-second drop takes ${(1000 / Math.abs(msPerWeek)).toFixed(0)} weeks. Pick up the pace or pick up volume.`;
+    return `Improving, but slowly: ${fmtTime(Math.abs(msPerWeek))}/week. Median cubers plateau within ~4 years because this rate decays toward zero. Pick up deliberate practice before the curve does it for you.`;
   if (msPerWeek < 50)
-    return `Flat. ${fmtTime(Math.abs(msPerWeek))}/week of drift is noise, not progress. You are maintaining, not training.`;
+    return `Flat. ${fmtTime(Math.abs(msPerWeek))}/week of drift is noise, not progress. Most cubers who quit effectively stopped here — maintaining feels like training but scores like standing still.`;
   return `Regressing at ${fmtTime(msPerWeek)}/week. You are actively getting worse. Either your practice is mindless or you are tired. Fix the input before complaining about the output.`;
 }
 
@@ -37,10 +41,13 @@ function consistencyText(score: number | null, cv: number | null): string {
   if (score == null || cv == null)
     return "Fewer than 10 clean solves in range. Consistency cannot be judged on that sample.";
   const pct = (cv * 100).toFixed(0);
-  if (score >= 85) return `CV ${pct}% — elite spread. Your worst solves would embarrass your average less than most people's.`;
-  if (score >= 60) return `CV ${pct}% — acceptable. Your bad solves are still dragging every average down.`;
-  if (score >= 30) return `CV ${pct}% — sloppy. You have fast solves in you, and you prove it by failing to reproduce them. Lookahead and pause discipline, not more speed.`;
-  return `CV ${pct}% — chaotic. Your times are a lottery. Drill slow, metronomic solves until the spread collapses; speed without repeatability is worthless.`;
+  if (cv < 0.04)
+    return `CV ${pct}% — implausibly tight for raw singles. Check that your log is real solves, not repeated averages.`;
+  if (score >= 88) return `CV ${pct}% — genuinely tight; measured logs rarely sit below 9% regardless of level. This is top-decile spread.`;
+  if (score >= 70) return `CV ${pct}% — above par. Community convention calls <10% good; you are close. Your worst solves still cost your averages.`;
+  if (score >= 55) return `CV ${pct}% — par for measured cubers (8–15%). Par is not praise: every point of spread is seconds leaking into your mo5s and mo12s.`;
+  if (score >= 40) return `CV ${pct}% — sloppy side of typical. You have fast solves in you and prove it by failing to reproduce them. Lookahead and pause discipline, not more speed.`;
+  return `CV ${pct}% — chaotic. Your times are a lottery; measured logs almost never look like this without pauses or careless turning. Drill slow, metronomic solves until the spread collapses.`;
 }
 
 function frequencyText(a: ScoredAnalysis): string {
@@ -48,10 +55,12 @@ function frequencyText(a: ScoredAnalysis): string {
   if (activeDays === 0)
     return "Zero active days in the last 14. You do not currently practice this event. There is nothing to analyze.";
   if (activeDays <= 2)
-    return `${activeDays} active days in 14. This is dabbling, not training. Target at least 5 days/week.`;
-  if (activeDays <= 4)
-    return `${activeDays} active days in 14, ~${solvesPerActiveDay.toFixed(0)} solves per day. Below the dose where improvement compounds. Add sessions, not just length.`;
-  return `${activeDays} active days in 14, ~${solvesPerActiveDay.toFixed(0)} solves/day. Volume is adequate. If results are still flat, quality is the problem, not quantity.`;
+    return `${activeDays} active days in 14. This is dabbling, not training. Self-reported improving cubers train about an hour most days.`;
+  if (activeDays <= 5)
+    return `${activeDays} active days in 14, ~${solvesPerActiveDay.toFixed(0)} solves per active day. Below the dose where improvement compounds; forum norms put regular improvers at 20–100 solves/day on more days than this.`;
+  if (activeDays <= 10)
+    return `${activeDays} active days in 14, ~${solvesPerActiveDay.toFixed(0)} solves/day. Workable, but the difference between decent and good is the days you skipped.`;
+  return `${activeDays} active days in 14, ~${solvesPerActiveDay.toFixed(0)} solves/day. Volume is adequate. If results are still flat, quality is the problem, not quantity — deliberate practice beats raw count.`;
 }
 
 function dataText(): string {
