@@ -241,6 +241,8 @@ export interface ScoredAnalysis {
   trend: TrendFit | null;
   consistencyCv: number | null;
   freq: FrequencyResult;
+  lastNTimes: number[];
+  days: DayBucket[];
 }
 
 const W_IMPROVEMENT = 0.4;
@@ -257,8 +259,13 @@ export function tierFor(score: number): ScoredAnalysis["tier"] {
 export interface AnalyzeInput {
   rangedClean: Solve[];
   allClean: Solve[];
-  rangedAll: Solve[];
   nowMs?: number;
+}
+
+export const LAST_N = 50;
+
+export function pctPerWeek(trend: TrendFit, currentLevelMs: number): number {
+  return (-trend.slopeMsPerDay * 7 * 100) / currentLevelMs;
 }
 
 export function analyze(input: AnalyzeInput): ScoredAnalysis {
@@ -266,7 +273,7 @@ export function analyze(input: AnalyzeInput): ScoredAnalysis {
   const days = dailyBuckets(rangedClean);
   const trend = fitDailyTrend(days);
 
-  const lastN = rangedClean.slice(-50).map((s) => s.timeMs);
+  const lastN = rangedClean.slice(-LAST_N).map((s) => s.timeMs);
   const currentLevelMs =
     lastN.length > 0 ? lastN.reduce((a, b) => a + b, 0) / lastN.length : null;
 
@@ -274,6 +281,20 @@ export function analyze(input: AnalyzeInput): ScoredAnalysis {
   const consistency = consistencyScore(lastN);
   const freq = frequencyStats(allClean, input.nowMs ?? Date.now());
   const frequency = frequencyScore(freq);
+
+  if (rangedClean.length === 0) {
+    return {
+      subscores: { improvement: null, consistency: null, frequency },
+      headline: null,
+      tier: null,
+      currentLevelMs,
+      trend,
+      consistencyCv: null,
+      freq,
+      lastNTimes: lastN,
+      days,
+    };
+  }
 
   let headline: number | null = null;
   let tw = W_IMPROVEMENT * (improvement != null ? 1 : 0);
@@ -296,6 +317,8 @@ export function analyze(input: AnalyzeInput): ScoredAnalysis {
     trend,
     consistencyCv: lastN.length >= 10 ? coefficientOfVariation(lastN) : null,
     freq,
+    lastNTimes: lastN,
+    days,
   };
 }
 

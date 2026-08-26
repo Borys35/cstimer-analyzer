@@ -2,9 +2,9 @@ import type { Theme } from "@/lib/theme";
 
 const LABELS: Record<Theme, string> = { dark: "Dark", light: "Light", sticker: "Sticker" };
 const DOTS: Record<Theme, string[]> = {
-  dark: ["#18181b", "#3f3f46", "#a1a1aa"],
+  dark: ["var(--surface-3)", "var(--border)", "var(--text-dim)"],
   light: ["#ffffff", "#d4d4d8", "#52525b"],
-  sticker: ["#ea3323", "#ffd500", "#0057c8"],
+  sticker: ["var(--cube-red)", "var(--cube-yellow)", "var(--cube-blue)"],
 };
 
 export default function ThemeToggle({

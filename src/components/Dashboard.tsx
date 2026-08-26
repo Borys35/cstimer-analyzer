@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import {
   Bar,
   CartesianGrid,
@@ -15,23 +15,19 @@ import {
 } from "recharts";
 import { parseCstimerExport } from "@/lib/parser";
 import type { ParseResult, ParsedSession, PuzzleType } from "@/lib/types";
+import { fmtTime, type BucketMode, type RangeKey } from "@/lib/stats";
 import {
-  analyze,
-  filterByRange,
-  fmtTime,
-  separateJunk,
-  type BucketMode,
-  type RangeKey,
-} from "@/lib/stats";
-import { buildCoachReport, projectionSentence } from "@/lib/coach";
-import { analyzeSplits } from "@/lib/splits";
-import { buildChartRows } from "@/lib/chartData";
+  computeDashboardModel,
+  effectiveTypeOf,
+  pickDefaultType,
+} from "@/lib/model";
 import {
   applyTheme,
   nextTheme,
-  paletteFor,
+  readChartPalette,
   readStoredTheme,
   systemTheme,
+  type ChartPalette,
   type Theme,
 } from "@/lib/theme";
 import ThemeToggle from "@/components/ThemeToggle";
@@ -53,10 +49,10 @@ const PUZZLE_TYPES: PuzzleType[] = [
 ];
 
 const TIER_COLOR: Record<string, string> = {
-  good: "#00a651",
-  decent: "#ffd500",
-  bad: "#ff5800",
-  horrible: "#ea3323",
+  good: "var(--cube-green)",
+  decent: "var(--cube-yellow)",
+  bad: "var(--cube-orange)",
+  horrible: "var(--cube-red)",
 };
 
 const AXIS_PANEL: Record<string, string> = {
@@ -80,11 +76,16 @@ export default function Dashboard() {
   const [horizon, setHorizon] = useState(4);
   const [dragging, setDragging] = useState(false);
   const [theme, setTheme] = useState<Theme>("dark");
+  const [palette, setPalette] = useState<ChartPalette | null>(null);
   const fileInput = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     setTheme(readStoredTheme() === "system" ? systemTheme() : ((document.documentElement.dataset.theme as Theme) || "dark"));
   }, []);
+
+  useLayoutEffect(() => {
+    setPalette(readChartPalette());
+  }, [theme]);
 
   const cycleTheme = useCallback(() => {
     setTheme((t) => {
@@ -102,14 +103,7 @@ export default function Dashboard() {
       setData(parsed);
       setFileName(file.name);
       setError(null);
-      const totals = new Map<string, number>();
-      for (const s of parsed.sessions) {
-        totals.set(s.puzzleType, (totals.get(s.puzzleType) ?? 0) + s.solves.length);
-      }
-      let best = "";
-      let bestN = -1;
-      for (const [t, n] of totals) if (n > bestN) [best, bestN] = [t, n];
-      setSelectedType(best);
+      setSelectedType(pickDefaultType(parsed));
       setOverrides({});
       setRange("all");
     } catch {
@@ -118,71 +112,14 @@ export default function Dashboard() {
   }, []);
 
   const effectiveType = useCallback(
-    (s: ParsedSession): PuzzleType => overrides[s.meta.key] ?? s.puzzleType,
+    (s: ParsedSession): PuzzleType => effectiveTypeOf(s, overrides),
     [overrides],
   );
 
   const derived = useMemo(() => {
     if (!data) return null;
-    const byType = new Map<string, { count: number; sessions: ParsedSession[] }>();
-    for (const s of data.sessions) {
-      const t = effectiveType(s);
-      const e = byType.get(t) ?? { count: 0, sessions: [] };
-      e.count += s.solves.length;
-      e.sessions.push(s);
-      byType.set(t, e);
-    }
-    const typeOptions = [...byType.entries()]
-      .sort((a, b) => b[1].count - a[1].count)
-      .map(([label, v]) => ({ label, count: v.count }));
-
-    const active = byType.get(selectedType)?.sessions ?? [];
-    const merged = active
-      .flatMap((s) => s.solves)
-      .sort((a, b) => a.dateSec - b.dateSec);
-    const rangedAll = filterByRange(merged, range);
-    const { kept, junk } = separateJunk(rangedAll);
-    const clean = kept.filter((s) => !s.dnf);
-
-    const analysis = analyze({
-      rangedClean: clean,
-      allClean: merged.filter((s) => !s.dnf),
-      rangedAll: kept,
-    });
-    const lastT = clean.length ? clean[clean.length - 1].dateSec * 1000 : Date.now();
-    const chartRows = buildChartRows({
-      kept,
-      clean,
-      bucket,
-      trend: analysis.trend,
-      horizonWeeks: horizon,
-      lastDateMs: lastT,
-    });
-
-    const last50Times = clean.slice(-50).map((s) => s.timeMs);
-    const splitStats = analyzeSplits(clean, analysis.currentLevelMs ?? 0);
-    const report = buildCoachReport(analysis, selectedType, {
-      last50Times,
-      splits: splitStats,
-      event: selectedType,
-    });
-    const projSentence = projectionSentence(analysis, horizon);
-
-    return {
-      typeOptions,
-      merged,
-      clean,
-      junkCount: junk.length,
-      dnfInRange: kept.length - clean.length,
-      chartRows,
-      analysis,
-      report,
-      projSentence,
-      bestSingle: clean.length ? Math.min(...clean.map((s) => s.timeMs)) : null,
-    };
-  }, [data, effectiveType, selectedType, range, bucket, horizon]);
-
-  const palette = paletteFor(theme);
+    return computeDashboardModel(data, { overrides, selectedType, range, bucket, horizonWeeks: horizon });
+  }, [data, overrides, selectedType, range, bucket, horizon]);
 
   if (!data) {
     return (
@@ -321,7 +258,7 @@ export default function Dashboard() {
           ["DNFs in range", String(d.dnfInRange)],
           ["Abandoned ignored", String(d.junkCount)],
           ["Current level", d.analysis.currentLevelMs != null ? fmtTime(d.analysis.currentLevelMs) : "—"],
-          ["Best single", d.bestSingle != null ? fmtTime(d.bestSingle) : "—"],
+          ["Best single", d.bestSingleMs != null ? fmtTime(d.bestSingleMs) : "—"],
           ["Active days / 14", `${d.analysis.freq.activeDays} @ ${d.analysis.freq.solvesPerActiveDay.toFixed(0)}/d`],
         ].map(([k, v], i) => (
           <div
@@ -344,6 +281,7 @@ export default function Dashboard() {
           }}
         />
         <div className="p-4">
+          {palette && (
           <ResponsiveContainer width="100%" height={380}>
             <ComposedChart data={d.chartRows} margin={{ top: 8, right: 8, bottom: 8, left: 8 }}>
               <CartesianGrid stroke={palette.grid} />
@@ -398,6 +336,7 @@ export default function Dashboard() {
               />
             </ComposedChart>
           </ResponsiveContainer>
+          )}
           <p className="mt-1 text-center text-[11px] text-[var(--text-faint)]">
             lower is better — fast times sit at the bottom
           </p>

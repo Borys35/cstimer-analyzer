@@ -1,13 +1,13 @@
 export type Theme = "dark" | "light" | "sticker";
 
-export const THEME_ORDER: Theme[] = ["dark", "light", "sticker"];
+export const THEMES: Theme[] = ["dark", "light", "sticker"];
 
-const STORAGE_KEY = "cta-theme";
+export const STORAGE_KEY = "cta-theme";
 
 export function readStoredTheme(): Theme | "system" {
   try {
     const t = localStorage.getItem(STORAGE_KEY);
-    if (t === "dark" || t === "light" || t === "sticker") return t;
+    if (THEMES.includes(t as Theme)) return t as Theme;
   } catch {}
   return "system";
 }
@@ -28,7 +28,7 @@ export function applyTheme(theme: Theme) {
 }
 
 export function nextTheme(current: Theme): Theme {
-  return THEME_ORDER[(THEME_ORDER.indexOf(current) + 1) % THEME_ORDER.length];
+  return THEMES[(THEMES.indexOf(current) + 1) % THEMES.length];
 }
 
 export interface ChartPalette {
@@ -45,34 +45,26 @@ export interface ChartPalette {
   proj: string;
 }
 
-const DARK_PALETTE: ChartPalette = {
-  chartBg: "#18181b",
-  grid: "#27272a",
-  tick: "#a1a1aa",
-  volume: "#3f3f46",
-  tooltipBg: "#18181b",
-  raw: "#d4d4d8",
-  ao5: "#38bdf8",
-  ao12: "#818cf8",
-  ao100: "#34d399",
-  trend: "#fbbf24",
-  proj: "#f87171",
+const VARS: Record<keyof ChartPalette, string> = {
+  chartBg: "--chart-bg",
+  grid: "--chart-grid",
+  tick: "--chart-tick",
+  volume: "--chart-volume",
+  tooltipBg: "--chart-tooltip-bg",
+  raw: "--series-raw",
+  ao5: "--series-ao5",
+  ao12: "--series-ao12",
+  ao100: "--series-ao100",
+  trend: "--series-trend",
+  proj: "--series-proj",
 };
 
-const LIGHT_PALETTE: ChartPalette = {
-  chartBg: "#ffffff",
-  grid: "#e4e4e7",
-  tick: "#52525b",
-  volume: "#d4d4d8",
-  tooltipBg: "#ffffff",
-  raw: "#71717a",
-  ao5: "#0284c7",
-  ao12: "#6366f1",
-  ao100: "#059669",
-  trend: "#d97706",
-  proj: "#dc2626",
-};
-
-export function paletteFor(theme: Theme): ChartPalette {
-  return theme === "light" ? LIGHT_PALETTE : DARK_PALETTE;
+export function readChartPalette(): ChartPalette {
+  const style = getComputedStyle(document.documentElement);
+  const out = {} as ChartPalette;
+  for (const key of Object.keys(VARS) as (keyof ChartPalette)[]) {
+    const v = style.getPropertyValue(VARS[key]).trim();
+    out[key] = v || "#71717a";
+  }
+  return out;
 }

@@ -110,6 +110,12 @@
   --chart-tick: #b1b1ba;
   --chart-volume: #3a3a46;
   --chart-tooltip-bg: #121218;
+  --series-raw: #d4d4d8;
+  --series-ao5: #38bdf8;
+  --series-ao12: #818cf8;
+  --series-ao100: #34d399;
+  --series-trend: #fbbf24;
+  --series-proj: #f87171;
 }
 
 body {

@@ -6,6 +6,7 @@ import {
   trendPoints,
   weeklyBuckets,
   type BucketMode,
+  type DayBucket,
 } from "./stats";
 
 export interface ChartRow {
@@ -22,6 +23,7 @@ export interface ChartRow {
 export interface BuildChartRowsInput {
   kept: Solve[];
   clean: Solve[];
+  days: DayBucket[];
   bucket: BucketMode;
   trend: Parameters<typeof trendPoints>[0];
   horizonWeeks: number;
@@ -57,8 +59,7 @@ export function buildChartRows(input: BuildChartRowsInput): ChartRow[] {
     rowAt(b.t).vol = b.count;
   }
 
-  const days = dailyBuckets(clean);
-  for (const p of trendPoints(input.trend, days)) rowAt(p.t).trend = p.ms;
+  for (const p of trendPoints(input.trend, input.days)) rowAt(p.t).trend = p.ms;
   for (const p of projectForward(input.trend, input.lastDateMs, input.horizonWeeks)) {
     rowAt(p.t).proj = p.ms;
   }

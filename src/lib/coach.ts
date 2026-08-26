@@ -1,6 +1,6 @@
 import type { ScoredAnalysis } from "./stats";
-import { fmtTime } from "./stats";
-import { prescribe, weakestAxis, type Axis, type Prescription } from "./prescriptions";
+import { fmtTime, pctPerWeek } from "./stats";
+import { prescribe, drillHint, weakestAxis, type Axis, type Prescription, type PrescriptionEvidence } from "./prescriptions";
 import type { SplitStats } from "./splits";
 
 export interface FocusItem {
@@ -8,6 +8,7 @@ export interface FocusItem {
   score: number | null;
   text: string;
   prescription?: Prescription;
+  isWeak?: boolean;
 }
 
 export interface CoachReport {
@@ -28,11 +29,11 @@ function improvementText(score: number | null, a: ScoredAnalysis): string {
   if (score == null || !a.trend)
     return "Not enough time-span in this range to establish a trend. Solve more, across more days, then come back.";
   const msPerWeek = a.trend.slopeMsPerDay * 7;
-  const pctPerWeek = a.currentLevelMs ? (-msPerWeek * 100) / a.currentLevelMs : 0;
+  const rate = a.currentLevelMs ? pctPerWeek(a.trend, a.currentLevelMs) : 0;
   if (msPerWeek <= -50) {
-    if (pctPerWeek > 3)
-      return `Improving ${pctPerWeek.toFixed(1)}%/week (${fmtTime(Math.abs(msPerWeek))}/week). Above 3%/week sustained is beginner territory or a fluke window; expect it to stall. Bank it while it lasts.`;
-    return `You are improving at ${fmtTime(Math.abs(msPerWeek))}/week (~${pctPerWeek.toFixed(1)}%/week). Long-run data says sustained −0.3 to −0.45%/week is realistic at your stage; anything above −1.5%/week for months puts you ahead of the curve. Keep doing what you are doing and add volume.`;
+    if (rate > 3)
+      return `Improving ${rate.toFixed(1)}%/week (${fmtTime(Math.abs(msPerWeek))}/week). Above 3%/week sustained is beginner territory or a fluke window; expect it to stall. Bank it while it lasts.`;
+    return `You are improving at ${fmtTime(Math.abs(msPerWeek))}/week (~${rate.toFixed(1)}%/week). Long-run data says sustained −0.3 to −0.45%/week is realistic at your stage; anything above −1.5%/week for months puts you ahead of the curve. Keep doing what you are doing and add volume.`;
   }
   if (msPerWeek < 0)
     return `Improving, but slowly: ${fmtTime(Math.abs(msPerWeek))}/week. Median cubers plateau within ~4 years because this rate decays toward zero. Pick up deliberate practice before the curve does it for you.`;
@@ -71,11 +72,14 @@ function dataText(): string {
   return "Some scores are missing because the selected window is too thin. Widen the range or upload more history.";
 }
 
-export function buildCoachReport(
-  a: ScoredAnalysis,
-  puzzleLabel: string,
-  extras: { last50Times: number[]; splits: SplitStats; event: string },
-): CoachReport {
+export interface CoachInput extends PrescriptionEvidence {
+  label: string;
+}
+
+export function buildCoachReport(input: CoachInput): CoachReport {
+  const a = input.analysis;
+  const puzzleLabel = input.label;
+  const extras = input;
   const level = a.currentLevelMs != null ? fmtTime(a.currentLevelMs) : "unknown";
   let verdictText: string;
   switch (a.tier) {
@@ -103,21 +107,21 @@ export function buildCoachReport(
   if (a.subscores.improvement == null && a.subscores.consistency == null) {
     focus.push({ area: "Data", score: null, text: dataText() });
   }
-  focus.sort((x, y) => (x.score ?? -1) - (y.score ?? -1));
+  focus.sort((x, y) => {
+    const sx = x.score ?? Number.POSITIVE_INFINITY;
+    const sy = y.score ?? Number.POSITIVE_INFINITY;
+    return sx - sy;
+  });
 
-  const evidence = {
-    analysis: a,
-    last50Times: extras.last50Times,
-    splits: extras.splits,
-    event: extras.event,
-  };
+  const evidence = input;
   const weak = weakestAxis(a);
   for (const f of focus) {
     if (f.area === weak && f.score != null) {
       f.prescription = prescribe(weak, evidence);
+      f.isWeak = true;
     } else if (f.area !== "Data" && f.score != null) {
-      const p2 = prescribe(f.area as Axis, evidence);
-      f.text += " " + p2.drills[0].name + ": " + p2.drills[0].why;
+      const hint = drillHint(f.area as Axis, evidence);
+      f.text += " " + hint.name + ": " + hint.why;
     }
   }
 

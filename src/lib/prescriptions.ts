@@ -56,7 +56,7 @@ function bestQuartileMean(times: number[]): number {
   return top.reduce((acc, v) => acc + v, 0) / top.length;
 }
 
-function consistencyEstimate(e: PrescriptionEvidence): string {
+export function consistencyEstimate(e: PrescriptionEvidence): string {
   const t = e.last50Times;
   const mean = t.reduce((a, b) => a + b, 0) / t.length;
   const q1 = bestQuartileMean(t);
@@ -93,7 +93,8 @@ function splitLine(e: PrescriptionEvidence): string {
   return `Split evidence: ` + PHASE_LABELS[w.phase] + ` consumes ` + (e.splits.shares[w.phase] * 100).toFixed(0) + `% of your solve vs typical ` + (REFERENCE_SHARES[w.phase] * 100).toFixed(0) + `%; the excess is worth ~` + fmtTime(w.excessMs) + `.`;
 }
 
-type Cell = (e: PrescriptionEvidence) => Prescription;
+type CellContent = Omit<Prescription, "estimate">;
+type Cell = (e: PrescriptionEvidence) => CellContent;
 
 const CELLS: Record<Exclude<LevelBand, "generic">, Record<Axis, Cell>> = {
   "30s+": {
@@ -104,7 +105,6 @@ const CELLS: Record<Exclude<LevelBand, "generic">, Record<Axis, Cell>> = {
         { name: "3 untimed reconstructions per session", why: "Writing down your solution exposes wasteful moves that timed solving hides." },
         { name: "Learn 2-look last layer if not known", why: "Sub-30 requires it; algorithmic phases are the cheapest time you will ever buy." },
       ],
-      estimate: improvementEstimate(e),
       leverage: "high",
     }),
     Consistency: (e) => ({
@@ -113,7 +113,6 @@ const CELLS: Record<Exclude<LevelBand, "generic">, Record<Axis, Cell>> = {
         { name: "Metronome F2L: one turn per beat, no pauses", why: "Forces continuous lookahead; pauses are the main source of outliers here." },
         { name: "Slow solve to strict 15s cap", why: "Trains uninterrupted recognition instead of burst-and-search habits." },
       ],
-      estimate: consistencyEstimate(e),
       leverage: "high",
     }),
     Frequency: (e) => ({
@@ -122,7 +121,6 @@ const CELLS: Record<Exclude<LevelBand, "generic">, Record<Axis, Cell>> = {
         { name: "Fixed daily 20-solve block", why: "Small daily volume beats one long weekly grind for retention." },
         { name: "Track streak, not totals", why: "A visible streak counters skipped days better than motivation." },
       ],
-      estimate: frequencyEstimate(e),
       leverage: "high",
     }),
   },
@@ -134,7 +132,6 @@ const CELLS: Record<Exclude<LevelBand, "generic">, Record<Axis, Cell>> = {
         { name: "Untimed F2L reconstruction of worst solve daily", why: "Finds the 8-move solutions your hands default past under time pressure." },
         { name: "Back-slot inserts only for one session", why: "Removes cube rotations and regrips that silently add seconds." },
       ],
-      estimate: improvementEstimate(e),
       leverage: "high",
     }),
     Consistency: (e) => ({
@@ -143,7 +140,6 @@ const CELLS: Record<Exclude<LevelBand, "generic">, Record<Axis, Cell>> = {
         { name: "No-look last-layer recognition", why: "Instant OLL/PLL identification removes the longest single pauses." },
         { name: "Count pauses aloud during 10 solves", why: "You cannot fix a pause you do not notice; counting makes them loud." },
       ],
-      estimate: consistencyEstimate(e),
       leverage: "high",
     }),
     Frequency: (e) => ({
@@ -152,7 +148,6 @@ const CELLS: Record<Exclude<LevelBand, "generic">, Record<Axis, Cell>> = {
         { name: "Two fixed sessions daily: 15 solves each", why: "Anchored sessions survive bad days; vague plans do not." },
         { name: "One Ao25 per session, logged", why: "Comparable numbers turn practice into feedback." },
       ],
-      estimate: frequencyEstimate(e),
       leverage: "medium",
     }),
   },
@@ -164,7 +159,6 @@ const CELLS: Record<Exclude<LevelBand, "generic">, Record<Axis, Cell>> = {
         { name: "Rebuild one full solve with movecount audit", why: "Above 55 moves HTM there is real F2L waste to cut. " + splitLine(e) },
         { name: "Drill your 5 worst PLLs by own timing", why: "Personalized alg weakness is cheaper than general speed." },
       ],
-      estimate: improvementEstimate(e),
       leverage: "high",
     }),
     Consistency: (e) => ({
@@ -173,7 +167,6 @@ const CELLS: Record<Exclude<LevelBand, "generic">, Record<Axis, Cell>> = {
         { name: "TPS ceiling drill: solve at 80% max turns", why: "Lockups from over-speed create your worst solves." },
         { name: "Warm-up protocol before timing", why: "First-solve outliers drag averages and distort trend data." },
       ],
-      estimate: consistencyEstimate(e),
       leverage: "medium",
     }),
     Frequency: (e) => ({
@@ -182,7 +175,6 @@ const CELLS: Record<Exclude<LevelBand, "generic">, Record<Axis, Cell>> = {
         { name: "Alternate measured days and experiment days", why: "Experiment days (new algs, slow solving) feed long-term speed without wrecking trend data." },
         { name: "Weekly comp-style Ao5 under pressure", why: "Competition nerves cost real seconds; rehearse them." },
       ],
-      estimate: frequencyEstimate(e),
       leverage: "medium",
     }),
   },
@@ -194,7 +186,6 @@ const CELLS: Record<Exclude<LevelBand, "generic">, Record<Axis, Cell>> = {
         { name: "1-hour alg triage: swap your slowest cases", why: "At sub-13, two bad algs are measurable. " + splitLine(e) },
         { name: "Blind cross+pair 1 execution", why: "Planning depth beyond pair one separates sub-11 from sub-13." },
       ],
-      estimate: improvementEstimate(e),
       leverage: "medium",
     }),
     Consistency: (e) => ({
@@ -203,7 +194,6 @@ const CELLS: Record<Exclude<LevelBand, "generic">, Record<Axis, Cell>> = {
         { name: "Edge-grip consistency checks between solves", why: "Micro-regrips mid-alg are invisible at home and fatal at comp." },
         { name: "Ao100 review: flag any solve >1.5x mean", why: "At this level outliers have specific, fixable causes." },
       ],
-      estimate: consistencyEstimate(e),
       leverage: "medium",
     }),
     Frequency: (e) => ({
@@ -212,7 +202,6 @@ const CELLS: Record<Exclude<LevelBand, "generic">, Record<Axis, Cell>> = {
         { name: "Quality gate: only counted solves with clean execution", why: "Mindless reps automate errors as strongly as skills." },
         { name: "Scheduled rest before competitions", why: "Fresh nervous system, faster recognition; burnout is measurable here." },
       ],
-      estimate: frequencyEstimate(e),
       leverage: "low",
     }),
   },
@@ -224,25 +213,36 @@ const GENERIC: Record<Axis, Cell> = {
     drills: [
       { name: "Dedicate sessions to deliberate slow solving", why: "Works on every event: remove pauses before adding speed." },
     ],
-    estimate: improvementEstimate(e),
     leverage: "medium",
   }),
   Consistency: (e) => ({
     diagnosis: "Spread above par; generic remedy applies to all events.",
     drills: [{ name: "Metronome-paced solves", why: "Uniform pacing is event-independent outlier suppression." }],
-    estimate: consistencyEstimate(e),
     leverage: "medium",
   }),
   Frequency: (e) => ({
     diagnosis: "Not enough contact days for this event.",
     drills: [{ name: "Fixed short daily session", why: "Frequency is the universal lever." }],
-    estimate: frequencyEstimate(e),
     leverage: "medium",
   }),
 };
 
-export function prescribe(axis: Axis, e: PrescriptionEvidence): Prescription {
+function selectCell(axis: Axis, e: PrescriptionEvidence): CellContent {
   const band = bandFor(e.event, e.analysis.currentLevelMs ?? 0);
-  const cell = band === "generic" ? GENERIC[axis] : CELLS[band][axis];
+  const cell: Cell = band === "generic" ? GENERIC[axis] : CELLS[band][axis];
   return cell(e);
+}
+
+const ESTIMATORS: Record<Axis, (e: PrescriptionEvidence) => string> = {
+  Improvement: improvementEstimate,
+  Consistency: consistencyEstimate,
+  Frequency: frequencyEstimate,
+};
+
+export function prescribe(axis: Axis, e: PrescriptionEvidence): Prescription {
+  return { ...selectCell(axis, e), estimate: ESTIMATORS[axis](e) };
+}
+
+export function drillHint(axis: Axis, e: PrescriptionEvidence): Drill {
+  return selectCell(axis, e).drills[0];
 }

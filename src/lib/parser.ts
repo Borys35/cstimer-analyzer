@@ -44,6 +44,46 @@ function typeFromScrambles(scrambles: string[]): PuzzleType | null {
   return "3x3";
 }
 
+function strongScrambleSignal(scrambles: string[]): PuzzleType | null {
+  if (scrambles.length === 0) return null;
+  const sample = scrambles.slice(0, Math.min(10, scrambles.length));
+  if (sample.every((s) => /\(\s*-?\d+\s*,\s*-?\d+\s*\)/.test(s))) return "Square-1";
+  if (sample.some((s) => /(^|\s)-?[URFDLB]w/.test(s))) return "4x4";
+  return null;
+}
+
+function maxTokenCount(scrambles: string[]): number {
+  let max = 0;
+  for (const s of scrambles.slice(0, 10)) {
+    const n = s.trim().split(/\s+/).length;
+    if (n > max) max = n;
+  }
+  return max;
+}
+
+export function classifySession(
+  solves: Solve[],
+  scrType?: string,
+): { puzzleType: PuzzleType; typeSource: ParsedSession["typeSource"] } {
+  const scrambles = solves.map((s) => s.scramble);
+
+  const strong = strongScrambleSignal(scrambles);
+  if (strong) return { puzzleType: strong, typeSource: "heuristic" };
+
+  if (scrType) {
+    const mapped = typeFromScrType(scrType);
+    if (mapped) {
+      const contradicted =
+        mapped === "2x2" && scrambles.length > 0 && maxTokenCount(scrambles) > 16;
+      if (!contradicted) return { puzzleType: mapped, typeSource: "scrType" };
+    }
+  }
+
+  const weak = typeFromScrambles(scrambles);
+  if (weak) return { puzzleType: weak, typeSource: "heuristic" };
+  return { puzzleType: "Unknown", typeSource: "unknown" };
+}
+
 interface CstimerSolveTuple {
   0: number[] | unknown;
   1: string;
@@ -128,19 +168,13 @@ export function parseCstimerExport(text: string): ParseResult {
       lastDateSec: dates.length ? Math.max(...dates) : 0,
     };
 
-    const scrambleGuess = typeFromScrambles(solves.map((s) => s.scramble));
-    let puzzleType: PuzzleType | null = scrambleGuess;
-    let typeSource: ParsedSession["typeSource"] = "heuristic";
-    if (!puzzleType && meta.scrType) {
-      puzzleType = typeFromScrType(meta.scrType);
-      if (puzzleType) typeSource = "scrType";
-    }
+    const classified = classifySession(solves, meta.scrType);
 
     sessions.push({
       meta,
       solves,
-      puzzleType: puzzleType ?? "Unknown",
-      typeSource,
+      puzzleType: classified.puzzleType,
+      typeSource: classified.typeSource,
     });
   }
 

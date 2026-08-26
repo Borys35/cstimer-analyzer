@@ -4,15 +4,15 @@ import { useState } from "react";
 import type { Theme } from "@/lib/theme";
 
 const COLORS = [
-  "#ea3323",
-  "#ffd500",
-  "#0057c8",
-  "#00a651",
-  "#ff5800",
-  "#f8fafc",
-  "#ea3323",
-  "#0057c8",
-  "#ffd500",
+  "var(--cube-red)",
+  "var(--cube-yellow)",
+  "var(--cube-blue)",
+  "var(--cube-green)",
+  "var(--cube-orange)",
+  "var(--cube-white)",
+  "var(--cube-red)",
+  "var(--cube-blue)",
+  "var(--cube-yellow)",
 ];
 
 export default function CubeHero() {

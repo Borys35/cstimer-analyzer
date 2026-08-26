@@ -36,7 +36,12 @@ test("dashboard renders after fixture upload", async ({ page }) => {
   await expect(page.locator(".recharts-surface").first()).toBeVisible();
   const trendLen = await page.evaluate(() => {
     const paths = [...document.querySelectorAll<SVGPathElement>("path.recharts-curve")];
-    const trend = paths.find((p) => ["#fbbf24", "#d97706"].includes(p.getAttribute("stroke") ?? ""));
+    const expected = getComputedStyle(document.documentElement)
+      .getPropertyValue("--series-trend")
+      .trim()
+      .toLowerCase();
+    if (!expected) return -1;
+    const trend = paths.find((p) => (p.getAttribute("stroke") ?? "").toLowerCase() === expected);
     return trend ? trend.getTotalLength() : -1;
   });
   expect(trendLen).toBeGreaterThan(10);
