@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Bar,
   CartesianGrid,
@@ -25,7 +25,17 @@ import {
 } from "@/lib/stats";
 import { buildCoachReport, projectionSentence } from "@/lib/coach";
 import { analyzeSplits } from "@/lib/splits";
-import { buildChartRows, type ChartRow } from "@/lib/chartData";
+import { buildChartRows } from "@/lib/chartData";
+import {
+  applyTheme,
+  nextTheme,
+  paletteFor,
+  readStoredTheme,
+  systemTheme,
+  type Theme,
+} from "@/lib/theme";
+import ThemeToggle from "@/components/ThemeToggle";
+import CubeHero from "@/components/CubeHero";
 
 const PUZZLE_TYPES: PuzzleType[] = [
   "2x2",
@@ -43,10 +53,16 @@ const PUZZLE_TYPES: PuzzleType[] = [
 ];
 
 const TIER_COLOR: Record<string, string> = {
-  good: "#34d399",
-  decent: "#facc15",
-  bad: "#fb923c",
-  horrible: "#f87171",
+  good: "#00a651",
+  decent: "#ffd500",
+  bad: "#ff5800",
+  horrible: "#ea3323",
+};
+
+const AXIS_PANEL: Record<string, string> = {
+  Improvement: "panel-red",
+  Consistency: "panel-blue",
+  Frequency: "panel-yellow",
 };
 
 function fmtDay(ms: number): string {
@@ -63,7 +79,20 @@ export default function Dashboard() {
   const [bucket, setBucket] = useState<BucketMode>("week");
   const [horizon, setHorizon] = useState(4);
   const [dragging, setDragging] = useState(false);
+  const [theme, setTheme] = useState<Theme>("dark");
   const fileInput = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    setTheme(readStoredTheme() === "system" ? systemTheme() : ((document.documentElement.dataset.theme as Theme) || "dark"));
+  }, []);
+
+  const cycleTheme = useCallback(() => {
+    setTheme((t) => {
+      const nt = nextTheme(t);
+      applyTheme(nt);
+      return nt;
+    });
+  }, []);
 
   const loadFile = useCallback(async (file: File) => {
     try {
@@ -153,16 +182,27 @@ export default function Dashboard() {
     };
   }, [data, effectiveType, selectedType, range, bucket, horizon]);
 
+  const palette = paletteFor(theme);
+
   if (!data) {
     return (
       <main className="mx-auto flex min-h-screen max-w-3xl flex-col items-center justify-center px-6">
-        <h1 className="mb-2 text-3xl font-bold tracking-tight">cstimer analyzer</h1>
-        <p className="mb-8 text-sm text-zinc-400">
+        <div className="absolute right-4 top-4 sm:right-6 sm:top-6">
+          <ThemeToggle theme={theme} onCycle={cycleTheme} />
+        </div>
+        <CubeHero />
+        <h1 className="mb-2 text-center text-3xl font-bold tracking-tight">
+          cstimer{" "}
+          <span className="bg-gradient-to-r from-[var(--cube-red)] via-[var(--cube-yellow)] to-[var(--cube-blue)] bg-clip-text text-transparent">
+            analyzer
+          </span>
+        </h1>
+        <p className="mb-8 text-sm text-[var(--text-dim)]">
           Upload a cstimer export. It will be graded without mercy.
         </p>
         <div
-          className={`w-full cursor-pointer rounded-xl border-2 border-dashed p-12 text-center transition-colors ${
-            dragging ? "border-zinc-300 bg-zinc-800" : "border-zinc-700 hover:border-zinc-500"
+          className={`card w-full cursor-pointer border-2 border-dashed p-12 text-center transition-colors ${
+            dragging ? "border-[var(--cube-yellow)]" : "border-[var(--border)] hover:border-[var(--cube-green)]"
           }`}
           onClick={() => fileInput.current?.click()}
           onDragOver={(e) => {
@@ -177,8 +217,8 @@ export default function Dashboard() {
             if (f) void loadFile(f);
           }}
         >
-          <p className="text-zinc-300">Drop your cstimer .txt export here</p>
-          <p className="mt-1 text-xs text-zinc-500">or click to browse — nothing leaves your machine</p>
+          <p className="text-[var(--text)]">Drop your cstimer .txt export here</p>
+          <p className="mt-1 text-xs text-[var(--text-faint)]">or click to browse — nothing leaves your machine</p>
         </div>
         <input
           ref={fileInput}
@@ -191,26 +231,33 @@ export default function Dashboard() {
             e.target.value = "";
           }}
         />
-        {error && <p className="mt-4 text-sm text-red-400">{error}</p>}
+        {error && <p className="mt-4 text-sm text-[var(--series-proj)]">{error}</p>}
       </main>
     );
   }
 
   const d = derived!;
   const a = d.analysis;
-  const subscoreBar = (label: string, score: number | null, weight: string) => (
-    <div>
+  const subscoreBar = (
+    label: string,
+    score: number | null,
+    weight: string,
+    axisClass: string,
+  ) => (
+    <div className={axisClass}>
       <div className="mb-1 flex items-baseline justify-between text-sm">
-        <span className="font-medium text-zinc-200">{label}</span>
-        <span className="text-zinc-400">
+        <span className="font-medium" style={{ color: "var(--axis-text)" }}>
+          {label}
+        </span>
+        <span className="text-[var(--text-dim)]">
           {score != null ? `${score}/100` : "n/a"}{" "}
-          <span className="text-xs text-zinc-600">({weight})</span>
+          <span className="text-xs text-[var(--text-faint)]">({weight})</span>
         </span>
       </div>
-      <div className="h-2 overflow-hidden rounded-full bg-zinc-800">
+      <div className="h-2.5 overflow-hidden rounded-full bg-[var(--track)]">
         <div
-          className={`h-full rounded-full ${score == null ? "bg-zinc-700" : score >= 80 ? "bg-emerald-400" : score >= 60 ? "bg-yellow-400" : score >= 40 ? "bg-orange-400" : "bg-red-500"}`}
-          style={{ width: `${score ?? 0}%` }}
+          className="h-full rounded-full transition-all"
+          style={{ width: `${score ?? 0}%`, background: "var(--axis)" }}
         />
       </div>
     </div>
@@ -220,74 +267,52 @@ export default function Dashboard() {
     <main className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
       <header className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">cstimer analyzer</h1>
-          <p className="text-xs text-zinc-500">
+          <h1 className="text-2xl font-bold tracking-tight">
+            cstimer{" "}
+            <span className="bg-gradient-to-r from-[var(--cube-red)] via-[var(--cube-yellow)] to-[var(--cube-blue)] bg-clip-text text-transparent">
+              analyzer
+            </span>
+          </h1>
+          <p className="text-xs text-[var(--text-faint)]">
             {fileName} · everything analyzed locally in your browser
           </p>
         </div>
-        <button
-          className="rounded-md border border-zinc-700 px-3 py-1.5 text-sm text-zinc-300 hover:border-zinc-500"
-          onClick={() => {
-            setData(null);
-            setError(null);
-          }}
-        >
-          Change file
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            className="card px-3 py-2 text-sm text-[var(--text-dim)] transition-colors hover:text-[var(--text)]"
+            onClick={() => {
+              setData(null);
+              setError(null);
+            }}
+          >
+            Change file
+          </button>
+          <ThemeToggle theme={theme} onCycle={cycleTheme} />
+        </div>
       </header>
 
       <section className="mb-6 flex flex-wrap items-end gap-4">
-        <label className="flex flex-col gap-1 text-xs text-zinc-400">
-          Event
-          <select
-            className="rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-zinc-100"
-            value={selectedType}
-            onChange={(e) => setSelectedType(e.target.value)}
-          >
-            {d.typeOptions.map((t) => (
-              <option key={t.label} value={t.label}>
-                {t.label} ({t.count} solves)
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="flex flex-col gap-1 text-xs text-zinc-400">
-          Range
-          <select
-            className="rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-zinc-100"
-            value={range}
-            onChange={(e) => setRange(e.target.value as RangeKey)}
-          >
-            <option value="all">All time</option>
-            <option value="90">Last 90 days</option>
-            <option value="30">Last 30 days</option>
-            <option value="7">Last 7 days</option>
-          </select>
-        </label>
-        <label className="flex flex-col gap-1 text-xs text-zinc-400">
-          Volume buckets
-          <select
-            className="rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-zinc-100"
-            value={bucket}
-            onChange={(e) => setBucket(e.target.value as BucketMode)}
-          >
-            <option value="day">Daily</option>
-            <option value="week">Weekly</option>
-          </select>
-        </label>
-        <label className="flex flex-col gap-1 text-xs text-zinc-400">
-          Projection horizon
-          <select
-            className="rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-zinc-100"
-            value={horizon}
-            onChange={(e) => setHorizon(Number(e.target.value))}
-          >
-            <option value={1}>+1 week</option>
-            <option value={2}>+2 weeks</option>
-            <option value={4}>+4 weeks</option>
-            <option value={8}>+8 weeks</option>
-          </select>
-        </label>
+        {[
+          { label: "Event", value: selectedType, set: setSelectedType, options: d.typeOptions.map((t) => ({ v: t.label, l: `${t.label} (${t.count} solves)` })) },
+          { label: "Range", value: range, set: (v: string) => setRange(v as RangeKey), options: [{ v: "all", l: "All time" }, { v: "90", l: "Last 90 days" }, { v: "30", l: "Last 30 days" }, { v: "7", l: "Last 7 days" }] },
+          { label: "Volume buckets", value: bucket, set: (v: string) => setBucket(v as BucketMode), options: [{ v: "day", l: "Daily" }, { v: "week", l: "Weekly" }] },
+          { label: "Projection horizon", value: String(horizon), set: (v: string) => setHorizon(Number(v)), options: [{ v: "1", l: "+1 week" }, { v: "2", l: "+2 weeks" }, { v: "4", l: "+4 weeks" }, { v: "8", l: "+8 weeks" }] },
+        ].map((sel) => (
+          <label key={sel.label} className="flex flex-col gap-1 text-xs text-[var(--text-dim)]">
+            {sel.label}
+            <select
+              className="rounded-md border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm text-[var(--text)]"
+              value={sel.value}
+              onChange={(e) => sel.set(e.target.value)}
+            >
+              {sel.options.map((o) => (
+                <option key={o.v} value={o.v}>
+                  {o.l}
+                </option>
+              ))}
+            </select>
+          </label>
+        ))}
       </section>
 
       <section className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
@@ -297,208 +322,184 @@ export default function Dashboard() {
           ["Abandoned ignored", String(d.junkCount)],
           ["Current level", d.analysis.currentLevelMs != null ? fmtTime(d.analysis.currentLevelMs) : "—"],
           ["Best single", d.bestSingle != null ? fmtTime(d.bestSingle) : "—"],
-          [
-            "Active days / 14",
-            `${d.analysis.freq.activeDays} @ ${d.analysis.freq.solvesPerActiveDay.toFixed(0)}/d`,
-          ],
-        ].map(([k, v]) => (
-          <div key={k} className="rounded-lg border border-zinc-800 bg-zinc-900/50 p-3">
-            <div className="text-[11px] uppercase tracking-wide text-zinc-500">{k}</div>
+          ["Active days / 14", `${d.analysis.freq.activeDays} @ ${d.analysis.freq.solvesPerActiveDay.toFixed(0)}/d`],
+        ].map(([k, v], i) => (
+          <div
+            key={k}
+            className="stat-chip p-3 pl-4"
+            style={{ "--chip": `var(--chip${i + 1})`, "--chip-ink": `var(--ink${i + 1})` } as React.CSSProperties}
+          >
+            <div className="chip-label text-[11px] uppercase tracking-wide">{k}</div>
             <div className="mt-1 font-mono text-lg">{v}</div>
           </div>
         ))}
       </section>
 
-      <section className="mb-6 rounded-xl border border-zinc-800 bg-zinc-900/50 p-4">
-        <ResponsiveContainer width="100%" height={380}>
-          <ComposedChart data={d.chartRows} margin={{ top: 8, right: 8, bottom: 8, left: 8 }}>
-            <CartesianGrid stroke="#27272a" />
-            <XAxis
-              dataKey="t"
-              type="number"
-              scale="time"
-              domain={["dataMin", "dataMax"]}
-              tickFormatter={fmtDay}
-              stroke="#71717a"
-              fontSize={11}
-            />
-            <YAxis
-              yAxisId="time"
-              domain={["auto", "auto"]}
-              tickFormatter={(ms: number) => fmtTime(ms)}
-              stroke="#71717a"
-              fontSize={11}
-              width={64}
-            />
-            <YAxis yAxisId="vol" orientation="right" stroke="#3f3f46" fontSize={11} width={32} />
-            <Tooltip
-              contentStyle={{ background: "#18181b", border: "1px solid #3f3f46", borderRadius: 8, fontSize: 12 }}
-              labelFormatter={(t) => fmtDay(Number(t))}
-              formatter={(value, name) =>
-                name === "Volume" ? [`${value} solves`, name] : [fmtTime(Number(value)), name]
-              }
-            />
-            <Legend wrapperStyle={{ fontSize: 12 }} />
-            <Bar yAxisId="vol" dataKey="vol" name="Volume" fill="#3f3f46" opacity={0.5} barSize={14} />
-            <Scatter yAxisId="time" dataKey="raw" name="Solve" fill="#a1a1aa" fillOpacity={0.55} />
-            <Line
-              yAxisId="time"
-              type="linear"
-              dataKey="ao5"
-              name="ao5"
-              stroke="#38bdf8"
-              dot={false}
-              strokeWidth={1}
-            />
-            <Line
-              yAxisId="time"
-              type="linear"
-              dataKey="ao12"
-              name="ao12"
-              stroke="#818cf8"
-              dot={false}
-              strokeWidth={1.5}
-            />
-            <Line
-              yAxisId="time"
-              type="linear"
-              dataKey="ao100"
-              name="ao100"
-              stroke="#34d399"
-              dot={false}
-              strokeWidth={2.5}
-            />
-            <Line
-              yAxisId="time"
-              type="linear"
-              dataKey="trend"
-              name="Trend"
-              stroke="#fbbf24"
-              dot={false}
-              strokeWidth={2}
-            />
-            <Line
-              yAxisId="time"
-              type="linear"
-              dataKey="proj"
-              name="Projection"
-              stroke="#f87171"
-              strokeDasharray="6 4"
-              dot={false}
-              strokeWidth={2}
-            />
-          </ComposedChart>
-        </ResponsiveContainer>
-        <p className="mt-1 text-center text-[11px] text-zinc-600">
-          lower is better — fast times sit at the bottom
-        </p>
+      <section className="card mb-6 overflow-hidden p-0">
+        <div
+          className="h-1.5 w-full"
+          style={{
+            background:
+              "linear-gradient(90deg, var(--cube-red) 0 16.6%, var(--cube-orange) 0 33.2%, var(--cube-yellow) 0 49.8%, var(--cube-green) 0 66.4%, var(--cube-blue) 0 83%, var(--cube-white) 0 100%)",
+          }}
+        />
+        <div className="p-4">
+          <ResponsiveContainer width="100%" height={380}>
+            <ComposedChart data={d.chartRows} margin={{ top: 8, right: 8, bottom: 8, left: 8 }}>
+              <CartesianGrid stroke={palette.grid} />
+              <XAxis
+                dataKey="t"
+                type="number"
+                scale="time"
+                domain={["dataMin", "dataMax"]}
+                tickFormatter={fmtDay}
+                stroke={palette.tick}
+                fontSize={11}
+              />
+              <YAxis
+                yAxisId="time"
+                domain={["auto", "auto"]}
+                tickFormatter={(ms: number) => fmtTime(ms)}
+                stroke={palette.tick}
+                fontSize={11}
+                width={64}
+              />
+              <YAxis yAxisId="vol" orientation="right" stroke={palette.volume} fontSize={11} width={32} />
+              <Tooltip
+                contentStyle={{
+                  background: palette.tooltipBg,
+                  border: `1px solid ${palette.grid}`,
+                  borderRadius: 8,
+                  fontSize: 12,
+                  color: palette.tick,
+                }}
+                labelStyle={{ color: palette.tick }}
+                labelFormatter={(t) => fmtDay(Number(t))}
+                formatter={(value, name) =>
+                  name === "Volume" ? [`${value} solves`, name] : [fmtTime(Number(value)), name]
+                }
+              />
+              <Legend wrapperStyle={{ fontSize: 12, color: palette.tick }} />
+              <Bar yAxisId="vol" dataKey="vol" name="Volume" fill={palette.volume} opacity={0.5} barSize={14} />
+              <Scatter yAxisId="time" dataKey="raw" name="Solve" fill={palette.raw} fillOpacity={0.55} />
+              <Line yAxisId="time" type="linear" dataKey="ao5" name="ao5" stroke={palette.ao5} dot={false} strokeWidth={1} />
+              <Line yAxisId="time" type="linear" dataKey="ao12" name="ao12" stroke={palette.ao12} dot={false} strokeWidth={1.5} />
+              <Line yAxisId="time" type="linear" dataKey="ao100" name="ao100" stroke={palette.ao100} dot={false} strokeWidth={2.5} />
+              <Line yAxisId="time" type="linear" dataKey="trend" name="Trend" stroke={palette.trend} dot={false} strokeWidth={2} />
+              <Line
+                yAxisId="time"
+                type="linear"
+                dataKey="proj"
+                name="Projection"
+                stroke={palette.proj}
+                strokeDasharray="6 4"
+                dot={false}
+                strokeWidth={2}
+              />
+            </ComposedChart>
+          </ResponsiveContainer>
+          <p className="mt-1 text-center text-[11px] text-[var(--text-faint)]">
+            lower is better — fast times sit at the bottom
+          </p>
+        </div>
       </section>
 
       <section className="mb-6 grid gap-4 lg:grid-cols-5">
-        <div className="rounded-xl border border-zinc-800 bg-zinc-900/50 p-5 lg:col-span-2">
-          <div className="text-[11px] uppercase tracking-wide text-zinc-500">Headline score</div>
+        <div className="card panel-solid panel-green p-5 lg:col-span-2">
+          <div className="panel-muted text-[11px] uppercase tracking-wide">Headline score</div>
           <div className="mt-2 flex items-baseline gap-3">
-            <span
-              className="font-mono text-6xl font-bold"
-              style={{ color: a.headline != null ? TIER_COLOR[a.tier ?? "bad"] : "#71717a" }}
-            >
+            <span className="font-mono text-6xl font-bold" style={{ color: theme === "sticker" ? "#fff" : TIER_COLOR[a.tier ?? "bad"] }}>
               {a.headline ?? "—"}
             </span>
-            <span className="text-zinc-500">/100</span>
+            <span className="panel-muted">/100</span>
           </div>
-          <div className="mt-3 space-y-3">
-            {subscoreBar("Improvement", a.subscores.improvement, "40%")}
-            {subscoreBar("Consistency", a.subscores.consistency, "30%")}
-            {subscoreBar("Frequency", a.subscores.frequency, "30%")}
+          <div className="mt-3 space-y-3 rounded-xl bg-black/15 p-3">
+            {subscoreBar("Improvement", a.subscores.improvement, "40%", "axis-improvement")}
+            {subscoreBar("Consistency", a.subscores.consistency, "30%", "axis-consistency")}
+            {subscoreBar("Frequency", a.subscores.frequency, "30%", "axis-frequency")}
           </div>
         </div>
-        <div className="rounded-xl border border-zinc-800 bg-zinc-900/50 p-5 lg:col-span-3">
-          <div
-            className="text-sm font-bold uppercase tracking-wider"
-            style={{ color: a.tier ? TIER_COLOR[a.tier] : "#71717a" }}
-          >
-            {d.report.verdictTitle}
-          </div>
-          <p className="mt-2 text-sm leading-relaxed text-zinc-300">{d.report.verdictText}</p>
+        <div className="card panel-solid panel-white flex flex-col justify-center p-5 lg:col-span-3">
+          {a.tier && <span className={`tier-pill tier-pill-${a.tier} w-fit`}>{d.report.verdictTitle.split(".")[0]}</span>}
+          <p className="panel-muted mt-3 text-sm leading-relaxed">{d.report.verdictText}</p>
           {d.projSentence && (
-            <p className="mt-3 rounded-md border border-zinc-800 bg-zinc-950/60 p-3 text-sm leading-relaxed text-zinc-400">
-              {d.projSentence}
-            </p>
+            <p className="mt-3 rounded-md border border-black/10 bg-black/5 p-3 text-sm leading-relaxed">{d.projSentence}</p>
           )}
         </div>
       </section>
 
       <section className="mb-6 space-y-3">
-        <h2 className="text-sm font-semibold uppercase tracking-wider text-zinc-400">
+        <h2 className="text-sm font-semibold uppercase tracking-wider text-[var(--text-dim)]">
           Where you are losing points — worst first, prescriptions included
         </h2>
         {d.report.splitHint && (
-          <p className="rounded-lg border border-zinc-800 bg-zinc-900/30 px-4 py-2 text-xs text-zinc-500">
-            {d.report.splitHint}
-          </p>
+          <p className="card px-4 py-2 text-xs text-[var(--text-faint)]">{d.report.splitHint}</p>
         )}
-        {d.report.focus.map((f, i) => (
-          <div
-            key={f.area}
-            className={`rounded-xl border bg-zinc-900/50 p-4 ${
-              f.prescription ? "border-amber-500/40" : "border-zinc-800"
-            }`}
-          >
-            <div className="mb-1 flex flex-wrap items-center gap-3">
-              <span className="text-sm font-semibold text-zinc-200">{f.area}</span>
-              {f.score != null && (
-                <span
-                  className="rounded-full px-2 py-0.5 font-mono text-xs"
-                  style={{
-                    color: f.score >= 80 ? "#34d399" : f.score >= 60 ? "#facc15" : f.score >= 40 ? "#fb923c" : "#f87171",
-                    background: "#1c1c1f",
-                  }}
-                >
-                  {f.score}/100
+        {d.report.focus.map((f, i) => {
+          const isWeak = Boolean(f.prescription);
+          const axisClass =
+            f.area === "Improvement"
+              ? "axis-improvement"
+              : f.area === "Consistency"
+                ? "axis-consistency"
+                : f.area === "Frequency"
+                  ? "axis-frequency"
+                  : "";
+          const panelClass = isWeak && AXIS_PANEL[f.area] ? `panel-solid ${AXIS_PANEL[f.area]}` : "";
+          return (
+            <div key={f.area} className={`card p-4 ${axisClass} ${panelClass}`}>
+              <div className="mb-1 flex flex-wrap items-center gap-3">
+                <span className="text-sm font-semibold" style={!isWeak && f.area !== "Data" ? { color: "var(--axis-text)" } : undefined}>
+                  {f.area}
                 </span>
-              )}
-              {i === 0 && f.prescription && (
-                <span className="rounded-full bg-amber-500/10 px-2 py-0.5 text-[11px] font-medium uppercase tracking-wide text-amber-400">
-                  weakest — full prescription
-                </span>
-              )}
-            </div>
-            <p className="text-sm leading-relaxed text-zinc-400">{f.text}</p>
-            {f.prescription && (
-              <div className="mt-3 space-y-3">
-                <p className="text-sm font-medium text-zinc-300">{f.prescription.diagnosis}</p>
-                <ol className="space-y-2">
-                  {f.prescription.drills.map((drill) => (
-                    <li key={drill.name} className="rounded-lg border border-zinc-800 bg-zinc-950/50 p-3">
-                      <div className="text-sm font-semibold text-zinc-100">{drill.name}</div>
-                      <div className="mt-0.5 text-xs leading-relaxed text-zinc-400">{drill.why}</div>
-                    </li>
-                  ))}
-                </ol>
-                {f.prescription.estimate && (
-                  <p className="rounded-md border border-emerald-500/20 bg-emerald-500/5 p-3 text-xs leading-relaxed text-emerald-200/90">
-                    <span className="font-semibold uppercase tracking-wide">The math:</span>{" "}
-                    {f.prescription.estimate}
-                    <span className="ml-2 rounded bg-zinc-800 px-1.5 py-0.5 text-[10px] uppercase text-zinc-400">
-                      {f.prescription.leverage} leverage
-                    </span>
-                  </p>
+                {f.score != null && (
+                  <span className="rounded-full bg-black/20 px-2 py-0.5 font-mono text-xs text-white">
+                    {f.score}/100
+                  </span>
+                )}
+                {isWeak && i === 0 && (
+                  <span className="rounded-full bg-white/20 px-2 py-0.5 text-[11px] font-medium uppercase tracking-wide">
+                    weakest — full prescription
+                  </span>
                 )}
               </div>
-            )}
-          </div>
-        ))}
+              <p className={`text-sm leading-relaxed ${isWeak ? "" : "text-[var(--text-dim)]"} panel-muted`}>{f.text}</p>
+              {f.prescription && (
+                <div className="mt-3 space-y-3">
+                  <p className="text-sm font-medium">{f.prescription.diagnosis}</p>
+                  <ol className="space-y-2">
+                    {f.prescription.drills.map((drill) => (
+                      <li key={drill.name} className="rounded-lg bg-black/15 p-3">
+                        <div className="text-sm font-semibold">{drill.name}</div>
+                        <div className="mt-0.5 text-xs leading-relaxed opacity-80">{drill.why}</div>
+                      </li>
+                    ))}
+                  </ol>
+                  {f.prescription.estimate && (
+                    <p className="rounded-md bg-white/10 p-3 text-xs leading-relaxed">
+                      <span className="font-semibold uppercase tracking-wide">The math:</span>{" "}
+                      {f.prescription.estimate}
+                      <span className="ml-2 rounded bg-black/25 px-1.5 py-0.5 text-[10px] uppercase">
+                        {f.prescription.leverage} leverage
+                      </span>
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
+          );
+        })}
       </section>
 
-      <details className="rounded-xl border border-zinc-800 bg-zinc-900/50 p-4 text-sm">
-        <summary className="cursor-pointer text-zinc-300">
+      <details className="card p-4 text-sm">
+        <summary className="cursor-pointer text-[var(--text-dim)]">
           Sessions ({data.sessions.length}) — fix auto-detected event types here
         </summary>
-        <div className="mt-3 divide-y divide-zinc-800">
+        <div className="mt-3 divide-y divide-[var(--border)]">
           {data.sessions.map((s) => (
             <div key={s.meta.key} className="flex flex-wrap items-center gap-x-4 gap-y-1 py-2">
-              <span className="w-20 font-mono text-xs text-zinc-500">{s.meta.key}</span>
-              <span className="min-w-40 flex-1 truncate text-xs text-zinc-400">
+              <span className="w-20 font-mono text-xs text-[var(--text-faint)]">{s.meta.key}</span>
+              <span className="min-w-40 flex-1 truncate text-xs text-[var(--text-dim)]">
                 {new Intl.DateTimeFormat("en-GB", {
                   day: "2-digit",
                   month: "short",
@@ -507,9 +508,9 @@ export default function Dashboard() {
                 }).format(s.meta.firstDateSec * 1000)}{" "}
                 · {s.meta.solveCount} solves
               </span>
-              <span className="text-xs text-zinc-600">{s.typeSource}</span>
+              <span className="text-xs text-[var(--text-faint)]">{s.typeSource}</span>
               <select
-                className="rounded border border-zinc-700 bg-zinc-900 px-2 py-1 text-xs"
+                className="rounded border border-[var(--border)] bg-[var(--surface)] px-2 py-1 text-xs text-[var(--text)]"
                 value={effectiveType(s)}
                 onChange={(e) =>
                   setOverrides((o) => ({ ...o, [s.meta.key]: e.target.value as PuzzleType }))

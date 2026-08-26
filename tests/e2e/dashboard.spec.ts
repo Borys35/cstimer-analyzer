@@ -36,10 +36,33 @@ test("dashboard renders after fixture upload", async ({ page }) => {
   await expect(page.locator(".recharts-surface").first()).toBeVisible();
   const trendLen = await page.evaluate(() => {
     const paths = [...document.querySelectorAll<SVGPathElement>("path.recharts-curve")];
-    const trend = paths.find((p) => p.getAttribute("stroke") === "#fbbf24");
+    const trend = paths.find((p) => ["#fbbf24", "#d97706"].includes(p.getAttribute("stroke") ?? ""));
     return trend ? trend.getTotalLength() : -1;
   });
   expect(trendLen).toBeGreaterThan(10);
 
   await expect(page.getByText(/full prescription/i).first()).toBeVisible();
+});
+
+test("theme toggle cycles and persists", async ({ page }) => {
+  test.skip(Boolean(process.env.SMOKE_TARGET), "theme prefs are client-local");
+  await page.goto("/");
+  await page.waitForFunction(() => Boolean(document.documentElement.dataset.theme));
+  const first = await page.evaluate(() => document.documentElement.dataset.theme ?? "");
+  await page.getByRole("button", { name: /Theme:/ }).click();
+  const second = await page.evaluate(() => document.documentElement.dataset.theme ?? "");
+  expect(second).not.toBe(first);
+  expect(second).not.toBe("");
+  const bgVar = (t: string) =>
+    page.evaluate((theme) => {
+      document.documentElement.dataset.theme = theme;
+      return getComputedStyle(document.documentElement).getPropertyValue("--bg").trim();
+    }, t);
+  const bgFirst = await bgVar(first);
+  const bgSecond = await bgVar(second);
+  expect(bgFirst).not.toBe(bgSecond);
+  await page.reload();
+  await page.waitForFunction(() => Boolean(document.documentElement.dataset.theme));
+  const persisted = await page.evaluate(() => document.documentElement.dataset.theme ?? "");
+  expect(persisted).toBe(second);
 });
