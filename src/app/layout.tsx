@@ -11,6 +11,11 @@ export default function RootLayout({
 }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en">
+      <head>
+        {process.env.VERCEL_GIT_COMMIT_SHA ? (
+          <meta name="git-sha" content={process.env.VERCEL_GIT_COMMIT_SHA} />
+        ) : null}
+      </head>
       <body className="min-h-screen antialiased">{children}</body>
     </html>
   );

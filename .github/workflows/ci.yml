@@ -1,0 +1,42 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    - cron: "0 3 * * *"
+
+jobs:
+  gate:
+    if: github.event_name != 'schedule'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx tsc --noEmit
+      - run: npm test
+      - run: npm run build
+      - run: npx playwright install --with-deps chromium
+      - run: npx playwright test
+
+  smoke-prod:
+    if: github.event_name == 'push' || github.event_name == 'schedule'
+    runs-on: ubuntu-latest
+    env:
+      SMOKE_TARGET: prod
+      SMOKE_URL: ${{ vars.PROD_URL || 'https://cstimer-analyzer.vercel.app/' }}
+      SMOKE_SHA: ${{ github.sha }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npx playwright test
