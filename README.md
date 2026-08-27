@@ -24,12 +24,20 @@ To export from cstimer: **Options → Export → .txt**, then drop the file onto
 
 ## The scoring model
 
-Three sub-scores feed one headline number:
+Three sub-scores feed one headline number. Weights shift by your current level — improvement matters most when you're fast, consistency matters most when you're fast:
 
 ```
-headline = 0.4·improvement + 0.3·consistency + 0.3·frequency
+headline = w_improvement·improvement + w_consistency·consistency + w_frequency·frequency
 (missing sub-scores are skipped and weights renormalised)
 ```
+
+| Level | Improvement | Consistency | Frequency |
+|---|---|---|---|
+| sub-60 | 45% | 15% | 40% |
+| sub-40 | 40% | 25% | 35% |
+| sub-25 | 35% | 35% | 30% |
+| sub-15 | 30% | 40% | 30% |
+| sub-10 | 25% | 45% | 30% |
 
 | Headline | Verdict |
 |---|---|
@@ -38,11 +46,11 @@ headline = 0.4·improvement + 0.3·consistency + 0.3·frequency
 | 40–59 | bad |
 | < 40 | horrible |
 
-The grades are deliberately strict. The anchors below are calibrated against measured cubing data — solve logs, WCA cohort analyses, community surveys — summarised in [`docs/research-scoring.md`](docs/research-scoring.md). Where public data was thin, anchors were set on the demanding side of the adjacent evidence and are marked as proposals there.
+The grades are deliberately strict. The anchors below are calibrated against measured cubing data — solve logs, WCA cohort analyses, community surveys — summarised in [`docs/research-scoring.md`](docs/research-scoring.md) and [`docs/research-prescriptions.md`](docs/research-prescriptions.md). Where public data was thin, anchors were set on the demanding side of the adjacent evidence and are marked as proposals there.
 
-Design rule: **rolling ao5/ao12/ao100 are decoration; every judgement is computed in time buckets** (daily means → weekly trend), so low-volume days still count proportionally.
+Design rule: **rolling ao5/ao12/ao100 are computed from session means; trend/projection are computed from individual solves**, so the chart shows session-level signal while the trend stays statistically accurate even with few sessions.
 
-### Improvement — weight 40%
+### Improvement — level-adaptive weight
 
 The trend of daily mean solve times is fitted with a count-weighted least-squares regression over the selected range, then judged **relative to your current level** (mean of your last 50 clean solves):
 
@@ -61,7 +69,14 @@ pctPerWeek = -(slope ms/day × 7) / currentLevel × 100
 
 Why these numbers: WCA cohort data shows beginners typically drop to half their entry time within ~6 months (**≈ −2.7%/week**) and then stall; long-run sustained improvement for established solvers is closer to **−0.3 to −0.45%/week**. Flat therefore scores 22, not 50 — maintenance is not training. Rates beyond −3%/week are capped because they either belong to beginners (where they end anyway) or to noisy windows, and the coach says so.
 
-### Consistency — weight 30%
+Level-appropriate expectations (from coaching research):
+- **sub-60**: −1.5 to −3%/week is normal; rapid gains from method changes
+- **sub-40**: −0.8 to −1.5%/week; F2L efficiency is the main lever
+- **sub-25**: −0.3 to −0.7%/week; improvement slows as lookahead matures
+- **sub-15**: −0.1 to −0.4%/week; gains come from efficiency margins
+- **sub-10**: −0.05 to −0.2%/week; even tiny slopes compound over years
+
+### Consistency — level-adaptive weight
 
 Coefficient of variation of your last 50 clean solves in range:
 
@@ -81,38 +96,60 @@ CV = stddev(times) / mean(times)
 
 Why: measured logs cluster at **8–15% CV at every skill level** — dispersion scales with the average, so relative spread barely improves as you get faster. Community convention calls <10% "good" and <5% "really good"; the anchors treat par (~9–12%) as 55–75, not as excellence. If you scored 84 under the old lenient scale, you will score ≈ 40 now — that is the intended correction, not a bug.
 
-### Frequency — weight 30%
+### Frequency — level-adaptive weight
 
 Trailing 14 calendar days, regardless of the range selector (habits are habits):
 
 ```
 score = 0.7 · f(activeDays) + 0.3 · g(solvesPerActiveDay)
-f: 2 days→20, 5→50, 10→85, 11→90, 14→100
+f: 2 days→20, 5→50, 7→70, 10→82, 12→90, 14→100
 g: 10/day→30, 20→60, 50→90, 100+→100
 ```
 
-Why: self-reported improving cubers train roughly an hour most days (~20–100 solves/day); >200/day shows no extra benefit and reads as mindless volume. Eleven-plus active days per fortnight is the top band — the difference between decent and good is usually the days you skipped.
+Why: self-reported improving cubers train roughly an hour most days (~20–100 solves/day); >200/day shows no extra benefit and reads as mindless volume. The curve flattens above 7 active days — going from 10 to 14 adds only ~18 points, reflecting diminishing returns. Five-to-seven sessions per week is the sweet spot for most levels; beyond that, quality dominates over quantity.
+
+Level-appropriate frequency targets (from coaching research):
+- **sub-60**: 3–5 sessions/week (20–30 min each); habit formation is the priority
+- **sub-40**: 5–7 sessions/week (30–60 min); 100 solves/day is the volume target
+- **sub-25**: 5–7 sessions/week (45–90 min); structured beats volume
+- **sub-15**: 5–7 sessions/week (60–120 min); fatigue reduces gains past 2 hrs/day
+- **sub-10**: 5–7 sessions/week (60–120 min) of structured practice; unstructured volume adds almost nothing
 
 ## Prescriptions
 
-The worst-scoring axis gets a full prescription: 2–3 specific drills, the rationale for each, and a recovery estimate computed from your own solves — never generic numbers:
+The worst-scoring axis gets a full prescription: 2–3 specific drills with sources, the rationale for each, and a recovery estimate computed from your own solves — never generic numbers:
 
 - **Consistency**: gap between your average and your best-quartile solves, plus the cost of excess spread (`(CV − 10%) × mean`)
-- **Splits** (3x3): your median cross/F2L/OLL/PLL time share vs coaching-reference shares (12/50/19/19%), converted to seconds at your level
+- **Splits** (3x3): your median cross/F2L/OLL/PLL time share vs coaching-reference shares, converted to seconds at your level
 - **Improvement**: where your fitted trend lands in 8 weeks vs holding a −1%/week pace
 - **Frequency**: active days missing from the top band, translated into solves per fortnight
 
-Prescription selection is a deterministic matrix: level band (30s+ / 20–30s / 13–20s / sub-13) × weakest axis. Other events use one generic track per axis.
+Prescription selection is a deterministic matrix: level band × weakest axis. Five bands for 3x3, each with research-backed drills from primary coaching sources (Zubin Park, J Perm, CuberPal, Caiden Lee, SpeedSolving training threads):
+
+| Band | Time range | #1 bottleneck |
+|---|---|---|
+| sub-60 | 60+ s | Method efficiency — switch to CFOP, learn intuitive F2L |
+| 30s+ | 30–60 s | F2L efficiency + 2-look OLL/PLL drilling |
+| 20-30s | 20–30 s | Cross-to-F2L transition + lookahead initiation |
+| 13-20s | 13–20 s | F2L fluidity + OLL/PLL recognition speed |
+| sub-13 | < 13 s | Micro-optimization + advanced subsets (COLL, ZBLL) |
+
+Other events use one generic track per axis. Full drill list and sources in [`docs/research-prescriptions.md`](docs/research-prescriptions.md).
 
 Split analysis only counts clean, unpenalized solves carrying exactly three phase marks (cstimer multi-phase: Cross / F2L / OLL / PLL), needs ≥25 of them in range, and degrades gracefully — a hint tells you when to switch the timer's multi-phase mode on.
 
 ## Chart
 
-- **Grey dots** — individual clean solves
-- **Blue/indigo/green lines** — rolling ao5/ao12/ao100 over the chronological stream (windows span across low-volume days instead of breaking)
-- **Amber line** — the fitted trend through daily means
+Each dot is a session (not an individual solve):
+
+- **Colored dots** — session mean times; color encodes CV (green < 8% → yellow < 12% → orange < 18% → red); dot size scales with solve count (√ scale); green ring outline on PB-mean sessions
+- **Error bars** — ±1 standard deviation from the session mean
+- **Blue/indigo/green lines** — rolling ao5/ao12/ao100 computed from session means
+- **Amber line** — the fitted trend through daily means (computed from individual solves for accuracy)
 - **Red dashed line** — the same fit extrapolated over your chosen horizon
 - **Dark bars** — solve volume per day/week
+
+Hover a session dot for: mean, best single, best ao5/ao12, solve count, std dev, CV%, session rank, and delta vs your overall average. Hover the trend/projection line for the predicted time on that day.
 
 Y axis is inverted-friendly: lower = faster = better.
 
