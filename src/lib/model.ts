@@ -87,6 +87,7 @@ export function computeDashboardModel(
   const chartRows = buildChartRows({
     kept,
     clean,
+    sessions: active,
     days: analysis.days,
     bucket: opts.bucket,
     trend: analysis.trend,

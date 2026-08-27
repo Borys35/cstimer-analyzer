@@ -5,6 +5,7 @@ import {
   Bar,
   CartesianGrid,
   ComposedChart,
+  ErrorBar,
   Legend,
   Line,
   ResponsiveContainer,
@@ -60,6 +61,153 @@ const AXIS_PANEL: Record<string, string> = {
   Consistency: "panel-blue",
   Frequency: "panel-yellow",
 };
+
+function cvColor(cv: number | undefined, palette: ChartPalette): string {
+  if (cv == null) return palette.raw;
+  if (cv < 0.08) return "var(--cube-green)";
+  if (cv < 0.12) return "var(--cube-yellow)";
+  if (cv < 0.18) return "var(--cube-orange)";
+  return "var(--cube-red)";
+}
+
+function sessionDot(props: {
+  cx?: number;
+  cy?: number;
+  payload?: Record<string, unknown>;
+  palette: ChartPalette;
+}) {
+  const { cx, cy, payload, palette } = props;
+  if (cx == null || cy == null || payload == null) return null;
+  const count = (payload.sessionCount as number) ?? 1;
+  const r = Math.min(Math.max(3, Math.sqrt(count) * 1.2), 11);
+  const fill = cvColor(payload.sessionCv as number | undefined, palette);
+  const isPb = payload.sessionIsPbMean === true;
+  return (
+    <g>
+      <circle cx={cx} cy={cy} r={r + 2} fill="none" stroke={fill} strokeWidth={isPb ? 2.5 : 0} opacity={0.9} />
+      <circle cx={cx} cy={cy} r={r} fill={fill} fillOpacity={0.75} stroke={palette.grid} strokeWidth={0.5} />
+    </g>
+  );
+}
+
+function SessionTooltip(props: {
+  active?: boolean;
+  payload?: Array<{ payload: Record<string, unknown> }>;
+  palette: ChartPalette | null;
+}) {
+  const { active, payload, palette } = props;
+  if (!active || !payload || !palette) return null;
+  const d = payload[0]?.payload;
+  if (!d) return null;
+
+  const t = d.t as number;
+  const mean = d.sessionMean as number | undefined;
+  const trend = d.trend as number | undefined;
+  const proj = d.proj as number | undefined;
+
+  const isSession = mean != null;
+  const isTrend = !isSession && (trend != null || proj != null);
+
+  if (isTrend) {
+    const value = proj ?? trend;
+    const label = proj != null ? "Projected" : "Trend";
+    return (
+      <div
+        className="rounded-lg border px-3 py-2 text-xs leading-relaxed shadow-lg"
+        style={{ background: palette.tooltipBg, borderColor: palette.grid, color: palette.tick }}
+      >
+        <div className="mb-1 font-semibold">
+          {new Intl.DateTimeFormat("en-GB", { day: "2-digit", month: "short", year: "2-digit", timeZone: "UTC" }).format(t)}
+        </div>
+        <div>
+          {label}: <span className="font-mono font-semibold">{fmtTime(value!)}</span>
+        </div>
+      </div>
+    );
+  }
+
+  if (!isSession) return null;
+
+  const std = d.sessionStd as number | undefined;
+  const cv = d.sessionCv as number | undefined;
+  const count = d.sessionCount as number | undefined;
+  const dnf = d.sessionDnf as number | undefined;
+  const best = d.sessionBest as number | undefined;
+  const bestAo5 = d.sessionBestAo5 as number | undefined;
+  const bestAo12 = d.sessionBestAo12 as number | undefined;
+  const name = d.sessionName as string | undefined;
+  const isPbMean = d.sessionIsPbMean === true;
+  const isPbSingle = d.sessionIsPbSingle === true;
+  const rank = d.sessionRank as number | undefined;
+  const delta = d.sessionDeltaPct as number | undefined;
+
+  const deltaText =
+    delta != null
+      ? delta < -2
+        ? `${Math.abs(delta).toFixed(1)}% faster than avg`
+        : delta > 2
+          ? `${delta.toFixed(1)}% slower than avg`
+          : "near your average"
+      : null;
+
+  const rankLabel =
+    rank != null
+      ? rank === 1
+        ? "Best session"
+        : rank <= 3
+          ? `Top ${rank} session`
+          : `Rank #${rank}`
+      : null;
+
+  return (
+    <div
+      className="rounded-lg border px-3 py-2.5 text-xs leading-relaxed shadow-lg"
+      style={{
+        background: palette.tooltipBg,
+        borderColor: palette.grid,
+        color: palette.tick,
+      }}
+    >
+      <div className="mb-1.5 font-semibold">
+        {name || "Session"}{" "}
+        <span className="font-normal opacity-60">
+          {new Intl.DateTimeFormat("en-GB", { day: "2-digit", month: "short", year: "2-digit", timeZone: "UTC" }).format(t)}
+        </span>
+      </div>
+      <div className="space-y-0.5">
+        <div>
+          Mean: <span className="font-mono">{fmtTime(mean!)}</span>
+          {isPbMean && <span className="ml-1.5 rounded bg-green-500/20 px-1 py-0.5 text-[10px] font-medium text-green-400">PB</span>}
+        </div>
+        <div>
+          Best single: <span className="font-mono">{best != null ? fmtTime(best) : "—"}</span>
+          {isPbSingle && <span className="ml-1.5 rounded bg-green-500/20 px-1 py-0.5 text-[10px] font-medium text-green-400">PB</span>}
+        </div>
+        {bestAo5 != null && (
+          <div>Best ao5: <span className="font-mono">{fmtTime(bestAo5)}</span></div>
+        )}
+        {bestAo12 != null && (
+          <div>Best ao12: <span className="font-mono">{fmtTime(bestAo12)}</span></div>
+        )}
+        <div className="mt-1 border-t border-white/10 pt-1">
+          Solves: {count}{dnf != null && dnf > 0 ? ` (${dnf} DNF)` : ""}
+        </div>
+        {std != null && (
+          <div>Std dev: <span className="font-mono">{fmtTime(std)}</span></div>
+        )}
+        {cv != null && (
+          <div>CV: <span className="font-mono">{(cv * 100).toFixed(1)}%</span></div>
+        )}
+      </div>
+      {(rankLabel || deltaText) && (
+        <div className="mt-1.5 border-t border-white/10 pt-1">
+          {rankLabel && <div className="font-medium">{rankLabel}</div>}
+          {deltaText && <div className="opacity-70">{deltaText}</div>}
+        </div>
+      )}
+    </div>
+  );
+}
 
 function fmtDay(ms: number): string {
   return new Intl.DateTimeFormat("en-GB", { day: "2-digit", month: "short", timeZone: "UTC" }).format(ms);
@@ -304,25 +452,16 @@ export default function Dashboard() {
               />
               <YAxis yAxisId="vol" orientation="right" stroke={palette.volume} fontSize={11} width={32} />
               <Tooltip
-                contentStyle={{
-                  background: palette.tooltipBg,
-                  border: `1px solid ${palette.grid}`,
-                  borderRadius: 8,
-                  fontSize: 12,
-                  color: palette.tick,
-                }}
-                labelStyle={{ color: palette.tick }}
-                labelFormatter={(t) => fmtDay(Number(t))}
-                formatter={(value, name) =>
-                  name === "Volume" ? [`${value} solves`, name] : [fmtTime(Number(value)), name]
-                }
+                content={<SessionTooltip palette={palette} />}
               />
               <Legend wrapperStyle={{ fontSize: 12, color: palette.tick }} />
-              <Bar yAxisId="vol" dataKey="vol" name="Volume" fill={palette.volume} opacity={0.5} barSize={14} />
-              <Scatter yAxisId="time" dataKey="raw" name="Solve" fill={palette.raw} fillOpacity={0.55} />
-              <Line yAxisId="time" type="linear" dataKey="ao5" name="ao5" stroke={palette.ao5} dot={false} strokeWidth={1} />
-              <Line yAxisId="time" type="linear" dataKey="ao12" name="ao12" stroke={palette.ao12} dot={false} strokeWidth={1.5} />
-              <Line yAxisId="time" type="linear" dataKey="ao100" name="ao100" stroke={palette.ao100} dot={false} strokeWidth={2.5} />
+              <Bar yAxisId="vol" dataKey="vol" name="Solves" fill={palette.volume} opacity={0.5} barSize={14} />
+              <Scatter yAxisId="time" dataKey="sessionMean" name="Session" fill={palette.raw} shape={(props: any) => sessionDot({ ...props, palette })}>
+                <ErrorBar dataKey="errorBar" width={4} strokeWidth={1} stroke={palette.tick} opacity={0.4} />
+              </Scatter>
+              <Line yAxisId="time" type="linear" dataKey="ao5" name="ao5 (sessions)" stroke={palette.ao5} dot={false} strokeWidth={1} />
+              <Line yAxisId="time" type="linear" dataKey="ao12" name="ao12 (sessions)" stroke={palette.ao12} dot={false} strokeWidth={1.5} />
+              <Line yAxisId="time" type="linear" dataKey="ao100" name="ao100 (sessions)" stroke={palette.ao100} dot={false} strokeWidth={2.5} />
               <Line yAxisId="time" type="linear" dataKey="trend" name="Trend" stroke={palette.trend} dot={false} strokeWidth={2} />
               <Line
                 yAxisId="time"
@@ -338,7 +477,7 @@ export default function Dashboard() {
           </ResponsiveContainer>
           )}
           <p className="mt-1 text-center text-[11px] text-[var(--text-faint)]">
-            lower is better — fast times sit at the bottom
+            each dot is a session — bigger = more solves, greener = more consistent
           </p>
         </div>
       </section>

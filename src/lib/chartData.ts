@@ -1,4 +1,4 @@
-import type { Solve } from "./types";
+import type { ParsedSession, Solve } from "./types";
 import {
   dailyBuckets,
   projectForward,
@@ -11,7 +11,20 @@ import {
 
 export interface ChartRow {
   t: number;
-  raw?: number;
+  sessionMean?: number;
+  sessionStd?: number;
+  sessionCv?: number;
+  sessionCount?: number;
+  sessionDnf?: number;
+  sessionBest?: number;
+  sessionBestAo5?: number;
+  sessionBestAo12?: number;
+  sessionName?: string;
+  sessionIsPbMean?: boolean;
+  sessionIsPbSingle?: boolean;
+  sessionRank?: number;
+  sessionDeltaPct?: number;
+  errorBar?: number[];
   ao5?: number;
   ao12?: number;
   ao100?: number;
@@ -23,6 +36,7 @@ export interface ChartRow {
 export interface BuildChartRowsInput {
   kept: Solve[];
   clean: Solve[];
+  sessions: ParsedSession[];
   days: DayBucket[];
   bucket: BucketMode;
   trend: Parameters<typeof trendPoints>[0];
@@ -30,11 +44,44 @@ export interface BuildChartRowsInput {
   lastDateMs: number;
 }
 
+function computeSessionMean(solves: Solve[]): number | null {
+  const clean = solves.filter((s) => !s.dnf);
+  if (clean.length === 0) return null;
+  return clean.reduce((a, b) => a + b.timeMs, 0) / clean.length;
+}
+
+function computeSessionStd(solves: Solve[]): number | null {
+  const clean = solves.filter((s) => !s.dnf);
+  if (clean.length < 2) return null;
+  const mean = clean.reduce((a, b) => a + b.timeMs, 0) / clean.length;
+  const variance = clean.reduce((a, b) => a + (b.timeMs - mean) ** 2, 0) / clean.length;
+  return Math.sqrt(variance);
+}
+
+function computeSessionCv(solves: Solve[]): number | null {
+  const clean = solves.filter((s) => !s.dnf);
+  if (clean.length < 2) return null;
+  const mean = clean.reduce((a, b) => a + b.timeMs, 0) / clean.length;
+  if (mean === 0) return null;
+  const variance = clean.reduce((a, b) => a + (b.timeMs - mean) ** 2, 0) / clean.length;
+  return Math.sqrt(variance) / mean;
+}
+
+function computeSessionBestAo(solves: Solve[], n: number): number | null {
+  const clean = solves.filter((s) => !s.dnf);
+  if (clean.length < n) return null;
+  let best = Infinity;
+  for (let i = 0; i <= clean.length - n; i++) {
+    const window = clean.slice(i, i + n);
+    if (window.length < n) break;
+    const mean = window.reduce((a, b) => a + b.timeMs, 0) / n;
+    if (mean < best) best = mean;
+  }
+  return best === Infinity ? null : best;
+}
+
 export function buildChartRows(input: BuildChartRowsInput): ChartRow[] {
-  const { kept, clean, bucket } = input;
-  const ao5 = rollingAverage(clean, 5);
-  const ao12 = rollingAverage(clean, 12);
-  const ao100 = rollingAverage(clean, 100);
+  const { kept, clean, sessions, bucket } = input;
 
   const rows = new Map<number, ChartRow>();
   const rowAt = (t: number): ChartRow => {
@@ -45,9 +92,84 @@ export function buildChartRows(input: BuildChartRowsInput): ChartRow[] {
     }
     return r;
   };
-  for (const s of kept) {
-    if (!s.dnf) rowAt(s.dateSec * 1000).raw = s.timeMs;
+
+  const sessionRows: { t: number; mean: number }[] = [];
+
+  for (const session of sessions) {
+    const solves = session.solves;
+    const mean = computeSessionMean(solves);
+    if (mean === null) continue;
+
+    const t = Math.round(
+      solves.reduce((a, s) => a + s.dateSec, 0) / solves.length * 1000,
+    );
+    const std = computeSessionStd(solves);
+    const cv = computeSessionCv(solves);
+    const dnfCount = solves.filter((s) => s.dnf).length;
+    const bestSingle = Math.min(...solves.filter((s) => !s.dnf).map((s) => s.timeMs));
+    const bestAo5 = computeSessionBestAo(solves, 5);
+    const bestAo12 = computeSessionBestAo(solves, 12);
+
+    const row = rowAt(t);
+    row.sessionMean = mean;
+    row.sessionStd = std ?? undefined;
+    row.sessionCv = cv ?? undefined;
+    row.sessionCount = solves.length;
+    row.sessionDnf = dnfCount || undefined;
+    row.sessionBest = bestSingle;
+    row.sessionBestAo5 = bestAo5 ?? undefined;
+    row.sessionBestAo12 = bestAo12 ?? undefined;
+    row.sessionName = session.meta.name || session.meta.key;
+
+    if (std != null) {
+      row.errorBar = [mean - std, mean + std];
+    }
+
+    sessionRows.push({ t, mean });
   }
+
+  sessionRows.sort((a, b) => a.mean - b.mean);
+  for (let rank = 0; rank < sessionRows.length; rank++) {
+    rows.get(sessionRows[rank].t)!.sessionRank = rank + 1;
+  }
+
+  let bestMeanSoFar = Infinity;
+  let bestSingleSoFar = Infinity;
+  const chrono = [...sessionRows].sort((a, b) => a.t - b.t);
+  for (const sr of chrono) {
+    const row = rows.get(sr.t)!;
+    if (sr.mean < bestMeanSoFar) {
+      row.sessionIsPbMean = true;
+      bestMeanSoFar = sr.mean;
+    }
+    if (row.sessionBest != null && row.sessionBest < bestSingleSoFar) {
+      row.sessionIsPbSingle = true;
+      bestSingleSoFar = row.sessionBest;
+    }
+  }
+
+  const overallMean =
+    sessionRows.length > 0
+      ? sessionRows.reduce((a, b) => a + b.mean, 0) / sessionRows.length
+      : 0;
+  for (const sr of sessionRows) {
+    const row = rows.get(sr.t)!;
+    row.sessionDeltaPct =
+      overallMean > 0 ? ((sr.mean - overallMean) / overallMean) * 100 : undefined;
+  }
+
+  const sessionMeans = sessionRows.map((r) => ({
+    dateSec: r.t / 1000,
+    timeMs: r.mean,
+    dnf: false,
+    penalty: 0,
+    scramble: "",
+    splits: [],
+  }));
+  const ao5 = rollingAverage(sessionMeans, 5);
+  const ao12 = rollingAverage(sessionMeans, 12);
+  const ao100 = rollingAverage(sessionMeans, 100);
+
   for (const p of ao5) rowAt(p.t).ao5 = p.ms;
   for (const p of ao12) rowAt(p.t).ao12 = p.ms;
   for (const p of ao100) rowAt(p.t).ao100 = p.ms;
