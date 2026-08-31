@@ -3,6 +3,7 @@ import type {
   TimerSession,
   TimerSolve,
   ParsedSession,
+  ParseResult,
   PuzzleType,
 } from "@/lib/types";
 
@@ -139,4 +140,35 @@ export function exportCstimer(sessions: TimerSession[]): string {
     JSON.stringify(sessionData);
 
   return JSON.stringify(output);
+}
+
+export function convertTimerSessionsToParseResult(
+  sessions: TimerSession[],
+): ParseResult {
+  const parsed: ParsedSession[] = sessions.map((session, i) => ({
+    meta: {
+      key: session.id,
+      name: session.name,
+      scrType: puzzleToScrType(session.puzzleType),
+      solveCount: session.solves.length,
+      firstDateSec: session.solves.length > 0
+        ? Math.min(...session.solves.map((s) => s.dateSec))
+        : session.createdAt,
+      lastDateSec: session.solves.length > 0
+        ? Math.max(...session.solves.map((s) => s.dateSec))
+        : session.createdAt,
+    },
+    solves: session.solves.map((s) => ({
+      timeMs: s.timeMs,
+      dnf: s.dnf,
+      penalty: s.penalty,
+      scramble: s.scramble,
+      dateSec: s.dateSec,
+      splits: [],
+    })),
+    puzzleType: session.puzzleType,
+    typeSource: "scrType" as const,
+  }));
+
+  return { sessions: parsed };
 }
