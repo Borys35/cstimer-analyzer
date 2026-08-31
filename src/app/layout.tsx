@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import "./globals.css";
 import { STORAGE_KEY, THEMES } from "@/lib/theme";
 import { SessionProvider } from "@/components/SessionProvider";
@@ -24,7 +25,20 @@ export default function RootLayout({
         ) : null}
       </head>
       <body className="min-h-screen antialiased">
-        <SessionProvider>{children}</SessionProvider>
+        <SessionProvider>
+          <nav className="flex items-center gap-4 px-4 py-2 border-b border-base text-sm bg-surface">
+            <Link href="/" className="font-bold hover:opacity-80">
+              Timer
+            </Link>
+            <Link href="/stats" className="opacity-60 hover:opacity-100">
+              Stats
+            </Link>
+            <Link href="/settings" className="opacity-60 hover:opacity-100">
+              Settings
+            </Link>
+          </nav>
+          {children}
+        </SessionProvider>
       </body>
     </html>
   );
