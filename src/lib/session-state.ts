@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect, useRef } from "react";
 import type { StorageAdapter, TimerSession, TimerSolve, TimerSettings, PuzzleType } from "@/lib/types";
 import { DEFAULT_SETTINGS } from "@/lib/types";
+import { importCstimer } from "@/lib/import-export";
 
 export interface SessionContextValue {
   sessions: TimerSession[];
@@ -13,6 +14,7 @@ export interface SessionContextValue {
   renameSession: (sessionId: string, name: string) => void;
   endSession: (sessionId: string) => void;
   updateSettings: (patch: Partial<TimerSettings>) => void;
+  importSessions: (text: string) => { imported: number; duplicates: number };
 }
 
 let idCounter = 0;
@@ -155,6 +157,17 @@ export function useSessionState(adapter: StorageAdapter): SessionContextValue {
     setSettings((prev) => ({ ...prev, ...patch }));
   }, []);
 
+  const importSessions = useCallback(
+    (text: string) => {
+      const result = importCstimer(text, sessions);
+      if (result.imported.length > 0) {
+        setSessions((prev) => [...prev, ...result.imported]);
+      }
+      return { imported: result.imported.length, duplicates: result.duplicates };
+    },
+    [sessions],
+  );
+
   return {
     sessions,
     activeSession,
@@ -166,5 +179,6 @@ export function useSessionState(adapter: StorageAdapter): SessionContextValue {
     renameSession,
     endSession,
     updateSettings,
+    importSessions,
   };
 }

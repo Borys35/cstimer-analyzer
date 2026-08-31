@@ -17,6 +17,8 @@ function mockSession(overrides: Record<string, unknown> = {}) {
       soundEnabled: false,
       scrambleLengths: { "3x3": 20, "2x2": 11, Pyraminx: 8, "Square-1": 11 },
     },
+    sessions: [],
+    importSessions: vi.fn(() => ({ imported: 0, duplicates: 0 })),
     updateSettings: vi.fn(),
   };
   return { ...defaults, ...overrides };

@@ -1,12 +1,17 @@
 "use client";
 
+import { useState, useRef } from "react";
 import { useSession } from "@/components/SessionProvider";
+import { exportCstimer } from "@/lib/import-export";
+import { Toast } from "@/components/Toast";
 import type { PuzzleType } from "@/lib/types";
 
 const PUZZLE_TYPES: PuzzleType[] = ["3x3", "2x2", "Pyraminx", "Square-1"];
 
 export default function SettingsPage() {
-  const { settings, updateSettings } = useSession();
+  const { settings, updateSettings, sessions, importSessions } = useSession();
+  const [toast, setToast] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleScrambleLength = (puzzle: PuzzleType, value: string) => {
     const num = Number(value);
@@ -14,6 +19,41 @@ export default function SettingsPage() {
     updateSettings({
       scrambleLengths: { ...settings.scrambleLengths, [puzzle]: num },
     });
+  };
+
+  const handleImport = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const text = ev.target?.result as string;
+      try {
+        const result = importSessions(text);
+        setToast(
+          `Imported ${result.imported} session${result.imported !== 1 ? "s" : ""}` +
+            (result.duplicates > 0
+              ? ` (${result.duplicates} duplicate${result.duplicates !== 1 ? "s" : ""} skipped)`
+              : ""),
+        );
+      } catch {
+        setToast("Import failed: invalid csTimer export file");
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = "";
+  };
+
+  const handleExport = () => {
+    const json = exportCstimer(sessions);
+    const blob = new Blob([json], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `cstimer-export-${new Date().toISOString().slice(0, 10)}.txt`;
+    a.click();
+    URL.revokeObjectURL(url);
+    setToast(`Exported ${sessions.length} session${sessions.length !== 1 ? "s" : ""}`);
   };
 
   return (
@@ -126,8 +166,44 @@ export default function SettingsPage() {
 
       <section className="mb-8">
         <h2 className="text-lg font-semibold mb-3">Data</h2>
-        <div className="bg-surface rounded-lg p-4 text-sm opacity-60">
-          Import/Export coming in a future update.
+        <div className="bg-surface rounded-lg p-4 space-y-3">
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="text-sm font-medium">Import csTimer export</div>
+              <div className="text-xs opacity-50">
+                Merge sessions from a .txt file
+              </div>
+            </div>
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              className="px-3 py-1 rounded text-sm bg-primary/20 text-primary hover:bg-primary/30"
+            >
+              Import
+            </button>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".txt,.json,application/json,text/plain"
+              onChange={handleImport}
+              className="hidden"
+            />
+          </div>
+
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="text-sm font-medium">Export sessions</div>
+              <div className="text-xs opacity-50">
+                Download {sessions.length} session{sessions.length !== 1 ? "s" : ""} as csTimer .txt
+              </div>
+            </div>
+            <button
+              onClick={handleExport}
+              disabled={sessions.length === 0}
+              className="px-3 py-1 rounded text-sm bg-surface-hover hover:bg-primary/20 disabled:opacity-40"
+            >
+              Export
+            </button>
+          </div>
         </div>
       </section>
 
@@ -137,6 +213,8 @@ export default function SettingsPage() {
           Coming soon.
         </div>
       </section>
+
+      {toast && <Toast message={toast} onClose={() => setToast(null)} />}
     </div>
   );
 }
