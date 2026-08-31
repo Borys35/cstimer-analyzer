@@ -1,5 +1,5 @@
-import Dashboard from "@/components/Dashboard";
+import TimerPage from "@/components/TimerPage";
 
 export default function Home() {
-  return <Dashboard />;
+  return <TimerPage />;
 }
