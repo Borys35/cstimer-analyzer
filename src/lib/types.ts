@@ -47,3 +47,59 @@ export interface ParsedSession {
 export interface ParseResult {
   sessions: ParsedSession[];
 }
+
+// --- Timer types ---
+
+export interface TimerSolve {
+  id: string;
+  timeMs: number;
+  dnf: boolean;
+  penalty: number;
+  scramble: string;
+  dateSec: number;
+}
+
+export interface TimerSession {
+  id: string;
+  name: string;
+  puzzleType: PuzzleType;
+  createdAt: number;
+  endedAt: number | null;
+  solves: TimerSolve[];
+}
+
+export interface TimerSettings {
+  startDelayMs: number;
+  inspectionEnabled: boolean;
+  inspectionDurationSec: number;
+  soundEnabled: boolean;
+  scrambleLengths: Record<string, number>;
+}
+
+export interface AppData {
+  sessions: TimerSession[];
+  activeSessionId: string;
+  settings: TimerSettings;
+}
+
+export const DEFAULT_SETTINGS: TimerSettings = {
+  startDelayMs: 500,
+  inspectionEnabled: false,
+  inspectionDurationSec: 15,
+  soundEnabled: false,
+  scrambleLengths: {
+    "3x3": 20,
+    "2x2": 11,
+    Pyraminx: 8,
+    "Square-1": 11,
+  },
+};
+
+export interface StorageAdapter {
+  load(): AppData | null;
+  save(data: AppData): void;
+  deleteSession(sessionId: string): void;
+  updateSession(session: TimerSession): void;
+  getActiveSession(): TimerSession | null;
+  setActiveSession(sessionId: string): void;
+}
