@@ -1,11 +1,9 @@
+"use client";
+
 import type { Theme } from "@/lib/theme";
 
 const LABELS: Record<Theme, string> = { dark: "Dark", light: "Light", sticker: "Sticker" };
-const DOTS: Record<Theme, string[]> = {
-  dark: ["var(--surface-3)", "var(--border)", "var(--text-dim)"],
-  light: ["#ffffff", "#d4d4d8", "#52525b"],
-  sticker: ["var(--cube-red)", "var(--cube-yellow)", "var(--cube-blue)"],
-};
+const ICONS: Record<Theme, string> = { dark: "\u25CF", light: "\u25CB", sticker: "\u25A0" };
 
 export default function ThemeToggle({
   theme,
@@ -18,17 +16,9 @@ export default function ThemeToggle({
     <button
       onClick={onCycle}
       aria-label={`Theme: ${LABELS[theme]}. Click to switch.`}
-      className="card flex items-center gap-2.5 px-3.5 py-2 text-sm font-medium transition-colors hover:border-[var(--cube-yellow)]"
+      className="card flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-[var(--text-dim)] transition-colors hover:text-[var(--text)]"
     >
-      <span className="flex -space-x-1">
-        {DOTS[theme].map((c, i) => (
-          <span
-            key={i}
-            className="inline-block h-3.5 w-3.5 rounded-full border border-black/30"
-            style={{ background: c }}
-          />
-        ))}
-      </span>
+      <span className="text-[10px]">{ICONS[theme]}</span>
       {LABELS[theme]}
     </button>
   );

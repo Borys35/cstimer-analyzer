@@ -28,10 +28,11 @@ test("dashboard renders after fixture upload", async ({ page }) => {
   await expect(page.getByText(/Drop your cstimer .txt export here/i)).toBeVisible();
   await page.setInputFiles('input[type="file"]', FIXTURE);
 
-  await expect(page.getByText("Headline score")).toBeVisible({ timeout: 20_000 });
-  const headline = await page.locator("span.font-mono.text-6xl").first().textContent();
-  expect(Number(headline)).toBeGreaterThanOrEqual(0);
-  expect(Number(headline)).toBeLessThanOrEqual(100);
+  await expect(page.locator(".tier-pill").first()).toBeVisible({ timeout: 20_000 });
+  const scoreText = await page.locator("svg text").first().textContent();
+  const score = Number(scoreText);
+  expect(score).toBeGreaterThanOrEqual(0);
+  expect(score).toBeLessThanOrEqual(100);
 
   await expect(page.locator(".recharts-surface").first()).toBeVisible();
   const trendLen = await page.evaluate(() => {
@@ -46,7 +47,7 @@ test("dashboard renders after fixture upload", async ({ page }) => {
   });
   expect(trendLen).toBeGreaterThan(10);
 
-  await expect(page.getByText(/full prescription/i).first()).toBeVisible();
+  await expect(page.getByText(/weakest/i).first()).toBeVisible();
 });
 
 test("theme toggle cycles and persists", async ({ page }) => {

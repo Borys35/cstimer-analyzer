@@ -1,14 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import type { Theme } from "@/lib/theme";
 
 const COLORS = [
   "var(--cube-red)",
   "var(--cube-yellow)",
   "var(--cube-blue)",
-  "var(--cube-green)",
   "var(--cube-orange)",
+  "var(--cube-green)",
   "var(--cube-white)",
   "var(--cube-red)",
   "var(--cube-blue)",
@@ -20,7 +19,7 @@ export default function CubeHero() {
   const shuffle = () => setOffset((o) => o + 1 + Math.floor(Math.random() * 3));
   return (
     <div
-      className="hero-grid mx-auto mb-8 grid w-fit cursor-pointer grid-cols-3 gap-1.5"
+      className="hero-grid mx-auto mb-10 grid w-fit cursor-pointer grid-cols-3 gap-2"
       onMouseEnter={shuffle}
       onClick={shuffle}
       aria-hidden
@@ -30,11 +29,11 @@ export default function CubeHero() {
         return (
           <span
             key={i}
-            className="hero-tile block h-9 w-9 sm:h-11 sm:w-11"
+            className="hero-tile block h-12 w-12 sm:h-14 sm:w-14"
             style={{
               background: color,
               "--tilt": `${((i * 37 + offset * 53) % 7) - 3}deg`,
-              "--scale": i === (offset % 9) ? 1.08 : 1,
+              "--scale": i === (offset % 9) ? 1.1 : 1,
             } as React.CSSProperties}
           />
         );
