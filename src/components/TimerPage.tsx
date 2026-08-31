@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useCallback } from "react";
+import { useEffect, useCallback, useRef } from "react";
 import { useSession } from "@/components/SessionProvider";
 import { useTimer } from "@/lib/use-timer";
 import { formatTimerTime } from "@/lib/timer-utils";
+import { playStartBeep, playStopBeep } from "@/lib/sound";
 
 export default function TimerPage() {
   const { activeSession, settings, addSolve } = useSession();
@@ -69,6 +70,22 @@ export default function TimerPage() {
       window.removeEventListener("keyup", handleKeyUpEvent);
     };
   }, [handleKeyDownEvent, handleKeyUpEvent]);
+
+  const prevPhaseRef = useRef(phase);
+  useEffect(() => {
+    if (!settings.soundEnabled) {
+      prevPhaseRef.current = phase;
+      return;
+    }
+
+    const prev = prevPhaseRef.current;
+    if (prev !== "running" && phase === "running") {
+      playStartBeep();
+    } else if (prev === "running" && phase === "idle") {
+      playStopBeep();
+    }
+    prevPhaseRef.current = phase;
+  }, [phase, settings.soundEnabled]);
 
   const phaseLabel =
     phase === "armed"
