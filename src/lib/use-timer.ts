@@ -7,7 +7,9 @@ export interface UseTimerOptions {
   puzzleType: PuzzleType;
   scrambleLength: number;
   startDelayMs: number;
-  onSolve: (solve: { timeMs: number; scramble: string }) => void;
+  inspectionEnabled?: boolean;
+  inspectionDurationSec?: number;
+  onSolve: (solve: { timeMs: number; scramble: string; dnf: boolean; penalty: number }) => void;
 }
 
 export interface UseTimerReturn {
@@ -23,6 +25,8 @@ export function useTimer({
   puzzleType,
   scrambleLength,
   startDelayMs,
+  inspectionEnabled = false,
+  inspectionDurationSec = 15,
   onSolve,
 }: UseTimerOptions): UseTimerReturn {
   const [phase, setPhase] = useState<TimerPhase>("idle");
@@ -33,8 +37,10 @@ export function useTimer({
 
   const startTimeRef = useRef(0);
   const rafRef = useRef(0);
-  const delayTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const delayTimerRef = useRef<ReturnType<typeof setTimeout> | number>(0);
+  const inspectionIntervalRef = useRef<ReturnType<typeof setInterval> | number>(0);
   const armedAtRef = useRef(0);
+  const inspectionRemainingRef = useRef(0);
 
   const tick = useCallback(() => {
     const elapsed = performance.now() - startTimeRef.current;
@@ -42,57 +48,121 @@ export function useTimer({
     rafRef.current = requestAnimationFrame(tick);
   }, []);
 
-  const startTiming = useCallback(() => {
-    startTimeRef.current = performance.now();
-    setPhase("running");
-    rafRef.current = requestAnimationFrame(tick);
-  }, [tick]);
+  const startTiming = useCallback(
+    (penalty: number) => {
+      cancelAnimationFrame(rafRef.current);
+      startTimeRef.current = performance.now();
+      setPhase("running");
+      rafRef.current = requestAnimationFrame(tick);
 
-  const stopTiming = useCallback(() => {
-    cancelAnimationFrame(rafRef.current);
-    const elapsed = performance.now() - startTimeRef.current;
-    const timeMs = Math.round(elapsed);
-    setDisplayTime(timeMs);
-    setPhase("idle");
-    onSolve({ timeMs, scramble });
-    setScramble(generateScramble(puzzleType, scrambleLength));
-  }, [onSolve, scramble, puzzleType, scrambleLength]);
+      const scrambleRef = scramble;
+      const onSolveRef = onSolve;
+      const puzzleRef = puzzleType;
+      const lenRef = scrambleLength;
+
+      const stopFn = () => {
+        cancelAnimationFrame(rafRef.current);
+        const elapsed = performance.now() - startTimeRef.current;
+        const timeMs = Math.round(elapsed);
+        setDisplayTime(timeMs);
+        setPhase("idle");
+        onSolveRef({ timeMs, scramble: scrambleRef, dnf: false, penalty });
+        setScramble(generateScramble(puzzleRef, lenRef));
+      };
+
+      stopTimingRef.current = stopFn;
+    },
+    [tick, onSolve, scramble, puzzleType, scrambleLength],
+  );
+
+  const stopTimingRef = useRef<() => void>(() => {});
+
+  const recordSolve = useCallback(
+    (dnf: boolean, penalty: number) => {
+      cancelAnimationFrame(rafRef.current);
+      clearInterval(inspectionIntervalRef.current);
+      clearTimeout(delayTimerRef.current);
+      setDisplayTime(0);
+      setPhase("idle");
+      onSolve({ timeMs: 0, scramble, dnf, penalty });
+      setScramble(generateScramble(puzzleType, scrambleLength));
+    },
+    [onSolve, scramble, puzzleType, scrambleLength],
+  );
 
   const handleKeyDown = useCallback(() => {
     if (phase === "idle") {
       setPhase("armed");
       armedAtRef.current = performance.now();
     } else if (phase === "running") {
-      stopTiming();
+      stopTimingRef.current();
     }
-  }, [phase, stopTiming]);
+  }, [phase]);
 
   const handleKeyUp = useCallback(() => {
     if (phase === "armed") {
       const held = performance.now() - armedAtRef.current;
       const remaining = Math.max(0, startDelayMs - held);
-      delayTimerRef.current = setTimeout(startTiming, remaining);
-      setPhase("idle");
+
+      if (inspectionEnabled) {
+        delayTimerRef.current = setTimeout(() => {
+          setPhase("inspection");
+          inspectionRemainingRef.current = inspectionDurationSec;
+          setDisplayTime(inspectionDurationSec * 1000);
+
+          inspectionIntervalRef.current = setInterval(() => {
+            inspectionRemainingRef.current -= 1;
+            setDisplayTime(inspectionRemainingRef.current * 1000);
+            if (inspectionRemainingRef.current <= 0) {
+              clearInterval(inspectionIntervalRef.current);
+              recordSolve(true, 0);
+            }
+          }, 1000);
+        }, remaining);
+        setPhase("idle");
+      } else {
+        delayTimerRef.current = setTimeout(startTiming, remaining);
+        setPhase("idle");
+      }
     }
-  }, [phase, startDelayMs, startTiming]);
+  }, [phase, startDelayMs, inspectionEnabled, inspectionDurationSec, startTiming, recordSolve]);
 
   const handleTap = useCallback(() => {
     if (phase === "idle") {
-      startTiming();
-    } else if (phase === "running") {
-      stopTiming();
-    }
-  }, [phase, startTiming, stopTiming]);
+      if (inspectionEnabled) {
+        setPhase("inspection");
+        inspectionRemainingRef.current = inspectionDurationSec;
+        setDisplayTime(inspectionDurationSec * 1000);
 
-  // Cleanup on unmount
+        inspectionIntervalRef.current = setInterval(() => {
+          inspectionRemainingRef.current -= 1;
+          setDisplayTime(inspectionRemainingRef.current * 1000);
+          if (inspectionRemainingRef.current <= 0) {
+            clearInterval(inspectionIntervalRef.current);
+            recordSolve(true, 0);
+          }
+        }, 1000);
+      } else {
+        startTiming(0);
+      }
+    } else if (phase === "inspection") {
+      clearInterval(inspectionIntervalRef.current);
+      const remaining = inspectionRemainingRef.current;
+      const penalty = remaining > 2 ? 2 : 0;
+      startTiming(penalty);
+    } else if (phase === "running") {
+      stopTimingRef.current();
+    }
+  }, [phase, inspectionEnabled, inspectionDurationSec, startTiming, recordSolve]);
+
   useEffect(() => {
     return () => {
       cancelAnimationFrame(rafRef.current);
       clearTimeout(delayTimerRef.current);
+      clearInterval(inspectionIntervalRef.current);
     };
   }, []);
 
-  // Regenerate scramble when puzzle type changes
   useEffect(() => {
     if (phase === "idle") {
       setScramble(generateScramble(puzzleType, scrambleLength));

@@ -1,4 +1,4 @@
-export type TimerPhase = "idle" | "armed" | "running";
+export type TimerPhase = "idle" | "armed" | "running" | "inspection";
 
 export function formatTimerTime(ms: number): string {
   if (ms < 60000) {

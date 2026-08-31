@@ -13,11 +13,11 @@ export default function TimerPage() {
     settings.scrambleLengths[puzzleType] ?? 20;
 
   const solve = useCallback(
-    (data: { timeMs: number; scramble: string }) => {
+    (data: { timeMs: number; scramble: string; dnf: boolean; penalty: number }) => {
       addSolve({
         timeMs: data.timeMs,
-        dnf: false,
-        penalty: 0,
+        dnf: data.dnf,
+        penalty: data.penalty,
         scramble: data.scramble,
         dateSec: Math.floor(Date.now() / 1000),
       });
@@ -36,6 +36,8 @@ export default function TimerPage() {
     puzzleType,
     scrambleLength,
     startDelayMs: settings.startDelayMs,
+    inspectionEnabled: settings.inspectionEnabled,
+    inspectionDurationSec: settings.inspectionDurationSec,
     onSolve: solve,
   });
 
@@ -73,7 +75,9 @@ export default function TimerPage() {
       ? "Ready..."
       : phase === "running"
         ? "Solving..."
-        : "Press space to start";
+        : phase === "inspection"
+          ? "Inspecting..."
+          : "Press space to start";
 
   return (
     <div

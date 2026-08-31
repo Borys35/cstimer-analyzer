@@ -1,5 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { generateScramble } from "@/lib/scramble";
+import { DEFAULT_SETTINGS } from "@/lib/types";
+import type { PuzzleType } from "@/lib/types";
 
 const AXES_3X3 = [
   ["U", "D"],
@@ -121,6 +123,44 @@ describe("generateScramble", () => {
       const scramble = generateScramble("3x3", 5);
       const moves = scramble.trim().split(/\s+/);
       expect(moves).toHaveLength(5);
+    });
+
+    it("respects custom move count for 2x2", () => {
+      const scramble = generateScramble("2x2", 7);
+      const moves = scramble.trim().split(/\s+/);
+      expect(moves).toHaveLength(7);
+    });
+
+    it("respects custom move count for Pyraminx", () => {
+      const scramble = generateScramble("Pyraminx", 5);
+      const parts = scramble.split(" ");
+      const mainMoves = parts.filter((p) => /^[ULRB]('|2)?$/.test(p));
+      expect(mainMoves).toHaveLength(5);
+    });
+
+    it("respects custom slice count for Square-1", () => {
+      const scramble = generateScramble("Square-1", 7);
+      const slices = scramble.split(" / ");
+      expect(slices).toHaveLength(7);
+    });
+
+    it("DEFAULT_SETTINGS scramble lengths produce correct move counts", () => {
+      for (const [puzzle, length] of Object.entries(
+        DEFAULT_SETTINGS.scrambleLengths,
+      )) {
+        const scramble = generateScramble(puzzle as PuzzleType, length as number);
+        if (puzzle === "Pyraminx") {
+          const parts = scramble.split(" ");
+          const mainMoves = parts.filter((p) => /^[ULRB]('|2)?$/.test(p));
+          expect(mainMoves).toHaveLength(length);
+        } else if (puzzle === "Square-1") {
+          const slices = scramble.split(" / ");
+          expect(slices).toHaveLength(length);
+        } else {
+          const moves = scramble.trim().split(/\s+/);
+          expect(moves).toHaveLength(length);
+        }
+      }
     });
   });
 });
