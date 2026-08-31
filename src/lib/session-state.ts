@@ -13,6 +13,8 @@ export interface SessionContextValue {
   deleteSession: (sessionId: string) => void;
   renameSession: (sessionId: string, name: string) => void;
   endSession: (sessionId: string) => void;
+  deleteSolve: (sessionId: string, solveId: string) => void;
+  updateSolve: (sessionId: string, solveId: string, patch: Partial<Pick<TimerSolve, "penalty" | "dnf">>) => void;
   updateSettings: (patch: Partial<TimerSettings>) => void;
   importSessions: (text: string) => { imported: number; duplicates: number };
   clearAllSessions: () => void;
@@ -78,11 +80,11 @@ export function useSessionState(adapter: StorageAdapter): SessionContextValue {
     }
   }, [sessions.length, initDefaultSession]);
 
-  // Auto-save on every state change
-  const saveRef = useRef(false);
+  // Auto-save on every state change (skip first render since initial state comes from adapter)
+  const initialSaveSkipped = useRef(false);
   useEffect(() => {
-    if (!saveRef.current) {
-      saveRef.current = true;
+    if (!initialSaveSkipped.current) {
+      initialSaveSkipped.current = true;
       return;
     }
     if (sessions.length === 0 && activeSessionId === "") return;
@@ -158,6 +160,34 @@ export function useSessionState(adapter: StorageAdapter): SessionContextValue {
     );
   }, []);
 
+  const deleteSolve = useCallback((sessionId: string, solveId: string) => {
+    setSessions((prev) =>
+      prev.map((s) =>
+        s.id === sessionId
+          ? { ...s, solves: s.solves.filter((sol) => sol.id !== solveId) }
+          : s,
+      ),
+    );
+  }, []);
+
+  const updateSolve = useCallback(
+    (sessionId: string, solveId: string, patch: Partial<Pick<TimerSolve, "penalty" | "dnf">>) => {
+      setSessions((prev) =>
+        prev.map((s) =>
+          s.id === sessionId
+            ? {
+                ...s,
+                solves: s.solves.map((sol) =>
+                  sol.id === solveId ? { ...sol, ...patch } : sol,
+                ),
+              }
+            : s,
+        ),
+      );
+    },
+    [],
+  );
+
   const updateSettings = useCallback((patch: Partial<TimerSettings>) => {
     setSettings((prev) => ({ ...prev, ...patch }));
   }, []);
@@ -187,6 +217,8 @@ export function useSessionState(adapter: StorageAdapter): SessionContextValue {
     deleteSession,
     renameSession,
     endSession,
+    deleteSolve,
+    updateSolve,
     updateSettings,
     importSessions,
     clearAllSessions,

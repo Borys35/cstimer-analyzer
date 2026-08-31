@@ -1,8 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import type { PuzzleType } from "@/lib/types";
+import type { PuzzleType, TimerSolve } from "@/lib/types";
 import { useSession } from "@/components/SessionProvider";
+import { formatTimerTime } from "@/lib/timer-utils";
 
 const PUZZLE_OPTIONS: PuzzleType[] = ["3x3", "2x2", "Pyraminx", "Square-1"];
 
@@ -42,6 +43,60 @@ export function NewSessionPicker({
   );
 }
 
+function SolveList({
+  sessionId,
+  solves,
+  onDeleteSolve,
+  onUpdateSolve,
+}: {
+  sessionId: string;
+  solves: TimerSolve[];
+  onDeleteSolve: (solveId: string) => void;
+  onUpdateSolve: (solveId: string, patch: Partial<Pick<TimerSolve, "penalty" | "dnf">>) => void;
+}) {
+  if (solves.length === 0) return null;
+  const recent = solves.slice(-5).reverse();
+  return (
+    <div className="mt-1 space-y-0.5" onClick={(e) => e.stopPropagation()}>
+      {recent.map((solve, i) => (
+        <div key={solve.id} className="flex items-center gap-1 text-[10px]">
+          <span className="font-mono opacity-60 w-8 text-right">
+            {solve.dnf ? "DNF" : solve.penalty > 0 ? `+${solve.penalty * 2}` : formatTimerTime(solve.timeMs)}
+          </span>
+          <span className="opacity-30">#{solves.length - (recent.length - 1 - i)}</span>
+          <div className="ml-auto flex gap-0.5">
+            <button
+              onClick={() => onUpdateSolve(solve.id, { penalty: solve.penalty === 1 ? 0 : 1 })}
+              className={`px-1 py-0.5 rounded transition-colors ${
+                solve.penalty > 0 ? "bg-amber-500/30 text-amber-400" : "bg-surface-hover hover:bg-base"
+              }`}
+              title="+2 penalty"
+            >
+              +2
+            </button>
+            <button
+              onClick={() => onUpdateSolve(solve.id, { dnf: !solve.dnf })}
+              className={`px-1 py-0.5 rounded transition-colors ${
+                solve.dnf ? "bg-red-500/30 text-red-400" : "bg-surface-hover hover:bg-base"
+              }`}
+              title="DNF"
+            >
+              DNF
+            </button>
+            <button
+              onClick={() => onDeleteSolve(solve.id)}
+              className="px-1 py-0.5 rounded bg-surface-hover hover:bg-red-500/20 hover:text-red-400 transition-colors"
+              title="Delete solve"
+            >
+              x
+            </button>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export function SessionSidebar() {
   const {
     sessions,
@@ -51,6 +106,8 @@ export function SessionSidebar() {
     deleteSession,
     renameSession,
     endSession,
+    deleteSolve,
+    updateSolve,
   } = useSession();
 
   const [showPicker, setShowPicker] = useState(false);
@@ -135,6 +192,15 @@ export function SessionSidebar() {
                   delete
                 </button>
               </div>
+
+              {isActive && (
+                <SolveList
+                  sessionId={session.id}
+                  solves={session.solves}
+                  onDeleteSolve={(solveId) => deleteSolve(session.id, solveId)}
+                  onUpdateSolve={(solveId, patch) => updateSolve(session.id, solveId, patch)}
+                />
+              )}
             </li>
           );
         })}

@@ -60,7 +60,7 @@ export function useTimer({
       const puzzleRef = puzzleType;
       const lenRef = scrambleLength;
 
-      const stopFn = () => {
+      const recordAndReset = () => {
         cancelAnimationFrame(rafRef.current);
         const elapsed = performance.now() - startTimeRef.current;
         const timeMs = Math.round(elapsed);
@@ -70,7 +70,7 @@ export function useTimer({
         setScramble(generateScramble(puzzleRef, lenRef));
       };
 
-      stopTimingRef.current = stopFn;
+      stopTimingRef.current = recordAndReset;
     },
     [tick, onSolve, scramble, puzzleType, scrambleLength],
   );

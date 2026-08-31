@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState } from "react";
 import { useSession } from "@/components/SessionProvider";
-import { exportCstimer } from "@/lib/import-export";
+import { useImportExport } from "@/lib/use-import-export";
 import { Toast } from "@/components/Toast";
 import type { PuzzleType } from "@/lib/types";
 import type { Theme } from "@/lib/theme";
@@ -11,9 +11,8 @@ import { applyTheme, nextTheme, readStoredTheme, systemTheme } from "@/lib/theme
 const PUZZLE_TYPES: PuzzleType[] = ["3x3", "2x2", "Pyraminx", "Square-1"];
 
 export default function SettingsPage() {
-  const { settings, updateSettings, sessions, importSessions, clearAllSessions } = useSession();
-  const [toast, setToast] = useState<string | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const { settings, updateSettings, sessions, clearAllSessions } = useSession();
+  const { toast, setToast, fileInputRef, handleImport, handleExport } = useImportExport();
   const [showClearConfirm, setShowClearConfirm] = useState(false);
   const [currentTheme, setCurrentTheme] = useState<Theme>(() => {
     const stored = readStoredTheme();
@@ -26,41 +25,6 @@ export default function SettingsPage() {
     updateSettings({
       scrambleLengths: { ...settings.scrambleLengths, [puzzle]: num },
     });
-  };
-
-  const handleImport = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-      const text = ev.target?.result as string;
-      try {
-        const result = importSessions(text);
-        setToast(
-          `Imported ${result.imported} session${result.imported !== 1 ? "s" : ""}` +
-            (result.duplicates > 0
-              ? ` (${result.duplicates} duplicate${result.duplicates !== 1 ? "s" : ""} skipped)`
-              : ""),
-        );
-      } catch {
-        setToast("Import failed: invalid csTimer export file");
-      }
-    };
-    reader.readAsText(file);
-    e.target.value = "";
-  };
-
-  const handleExport = () => {
-    const json = exportCstimer(sessions);
-    const blob = new Blob([json], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `cstimer-export-${new Date().toISOString().slice(0, 10)}.txt`;
-    a.click();
-    URL.revokeObjectURL(url);
-    setToast(`Exported ${sessions.length} session${sessions.length !== 1 ? "s" : ""}`);
   };
 
   return (
@@ -277,13 +241,6 @@ export default function SettingsPage() {
             </div>
           </div>
         )}
-      </section>
-
-      <section className="mb-8">
-        <h2 className="text-lg font-semibold mb-3">Account</h2>
-        <div className="bg-surface rounded-lg p-4 text-sm opacity-60">
-          Coming soon.
-        </div>
       </section>
 
       {toast && <Toast message={toast} onClose={() => setToast(null)} />}
