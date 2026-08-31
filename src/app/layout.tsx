@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { STORAGE_KEY, THEMES } from "@/lib/theme";
+import { SessionProvider } from "@/components/SessionProvider";
 
 export const metadata: Metadata = {
   title: "cstimer analyzer",
@@ -22,7 +23,9 @@ export default function RootLayout({
           <meta name="git-sha" content={process.env.VERCEL_GIT_COMMIT_SHA} />
         ) : null}
       </head>
-      <body className="min-h-screen antialiased">{children}</body>
+      <body className="min-h-screen antialiased">
+        <SessionProvider>{children}</SessionProvider>
+      </body>
     </html>
   );
 }
