@@ -17,8 +17,11 @@ function mockSession(overrides: Record<string, unknown> = {}) {
       soundEnabled: false,
       scrambleLengths: { "3x3": 20, "2x2": 11, Pyraminx: 8, "Square-1": 11 },
     },
-    sessions: [],
+    sessions: [
+      { id: "s1", name: "Session 1", puzzleType: "3x3", solves: [] },
+    ],
     importSessions: vi.fn(() => ({ imported: 0, duplicates: 0 })),
+    clearAllSessions: vi.fn(),
     updateSettings: vi.fn(),
   };
   return { ...defaults, ...overrides };
@@ -106,5 +109,48 @@ describe("SettingsPage", () => {
     vi.mocked(useSession).mockReturnValue(session as never);
     render(<SettingsPage />);
     expect(screen.queryByText(/inspection duration/i)).toBeNull();
+  });
+
+  it("renders Appearance section with theme options", () => {
+    const session = mockSession();
+    vi.mocked(useSession).mockReturnValue(session as never);
+    render(<SettingsPage />);
+    expect(screen.getByText("Appearance")).toBeDefined();
+    expect(screen.getAllByText(/dark/i).length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText(/light/i).length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText(/sticker/i).length).toBeGreaterThanOrEqual(1);
+  });
+
+  it("renders Clear all sessions button in Data section", () => {
+    const session = mockSession();
+    vi.mocked(useSession).mockReturnValue(session as never);
+    render(<SettingsPage />);
+    expect(screen.getByText("Clear all")).toBeDefined();
+  });
+
+  it("shows confirmation dialog when Clear all is clicked", () => {
+    const session = mockSession();
+    vi.mocked(useSession).mockReturnValue(session as never);
+    render(<SettingsPage />);
+    fireEvent.click(screen.getByText("Clear all"));
+    expect(screen.getByText(/are you sure/i)).toBeDefined();
+  });
+
+  it("calls clearAllSessions when confirmation is confirmed", () => {
+    const session = mockSession();
+    vi.mocked(useSession).mockReturnValue(session as never);
+    render(<SettingsPage />);
+    fireEvent.click(screen.getByText("Clear all"));
+    fireEvent.click(screen.getByText("Yes, clear all"));
+    expect(session.clearAllSessions).toHaveBeenCalled();
+  });
+
+  it("does not call clearAllSessions when confirmation is cancelled", () => {
+    const session = mockSession();
+    vi.mocked(useSession).mockReturnValue(session as never);
+    render(<SettingsPage />);
+    fireEvent.click(screen.getByText("Clear all"));
+    fireEvent.click(screen.getByText("Cancel"));
+    expect(session.clearAllSessions).not.toHaveBeenCalled();
   });
 });

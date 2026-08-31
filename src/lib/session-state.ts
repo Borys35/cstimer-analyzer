@@ -15,6 +15,7 @@ export interface SessionContextValue {
   endSession: (sessionId: string) => void;
   updateSettings: (patch: Partial<TimerSettings>) => void;
   importSessions: (text: string) => { imported: number; duplicates: number };
+  clearAllSessions: () => void;
 }
 
 let idCounter = 0;
@@ -61,17 +62,21 @@ export function useSessionState(adapter: StorageAdapter): SessionContextValue {
   );
   const initRef = useRef(false);
 
+  const initDefaultSession = useCallback(() => {
+    const defaultSession = createDefaultSession();
+    defaultSession.name = generateSessionName([]);
+    setSessions([defaultSession]);
+    setActiveSessionId(defaultSession.id);
+  }, []);
+
   // Initialize default session on first mount if empty
   useEffect(() => {
     if (initRef.current) return;
     initRef.current = true;
     if (sessions.length === 0) {
-      const defaultSession = createDefaultSession();
-      defaultSession.name = generateSessionName([]);
-      setSessions([defaultSession]);
-      setActiveSessionId(defaultSession.id);
+      initDefaultSession();
     }
-  }, [sessions.length]);
+  }, [sessions.length, initDefaultSession]);
 
   // Auto-save on every state change
   const saveRef = useRef(false);
@@ -168,6 +173,10 @@ export function useSessionState(adapter: StorageAdapter): SessionContextValue {
     [sessions],
   );
 
+  const clearAllSessions = useCallback(() => {
+    initDefaultSession();
+  }, [initDefaultSession]);
+
   return {
     sessions,
     activeSession,
@@ -180,5 +189,6 @@ export function useSessionState(adapter: StorageAdapter): SessionContextValue {
     endSession,
     updateSettings,
     importSessions,
+    clearAllSessions,
   };
 }
