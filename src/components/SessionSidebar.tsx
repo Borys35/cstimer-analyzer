@@ -105,7 +105,6 @@ export function SessionSidebar() {
     createSession,
     deleteSession,
     renameSession,
-    endSession,
     deleteSolve,
     updateSolve,
   } = useSession();
@@ -178,12 +177,6 @@ export function SessionSidebar() {
                   className="text-[10px] px-1.5 py-0.5 rounded bg-surface-hover hover:bg-base transition-colors"
                 >
                   rename
-                </button>
-                <button
-                  onClick={() => endSession(session.id)}
-                  className="text-[10px] px-1.5 py-0.5 rounded bg-surface-hover hover:bg-base transition-colors"
-                >
-                  end
                 </button>
                 <button
                   onClick={() => deleteSession(session.id)}

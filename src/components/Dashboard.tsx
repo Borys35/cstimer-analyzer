@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useState } from "react";
 import {
   Bar,
   CartesianGrid,
@@ -14,8 +14,9 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { parseCstimerExport } from "@/lib/parser";
 import type { ParseResult, ParsedSession, PuzzleType } from "@/lib/types";
+import { useSession } from "@/components/SessionProvider";
+import { convertTimerSessionsToParseResult } from "@/lib/import-export";
 import { fmtTime, type BucketMode, type RangeKey } from "@/lib/stats";
 import { bandFromMs, levelWeights, pctPerWeek } from "@/lib/stats";
 import {
@@ -24,16 +25,9 @@ import {
   pickDefaultType,
 } from "@/lib/model";
 import {
-  applyTheme,
-  nextTheme,
   readChartPalette,
-  readStoredTheme,
-  systemTheme,
   type ChartPalette,
-  type Theme,
 } from "@/lib/theme";
-import ThemeToggle from "@/components/ThemeToggle";
-import CubeHero from "@/components/CubeHero";
 import ScoreboardHero from "@/components/ScoreboardHero";
 
 const PUZZLE_TYPES: PuzzleType[] = [
@@ -208,54 +202,22 @@ function fmtDay(ms: number): string {
   return new Intl.DateTimeFormat("en-GB", { day: "2-digit", month: "short", timeZone: "UTC" }).format(ms);
 }
 
-export default function Dashboard({ initialData }: { initialData?: ParseResult }) {
-  const [data, setData] = useState<ParseResult | null>(initialData ?? null);
-  const [fileName, setFileName] = useState("");
-  const [error, setError] = useState<string | null>(null);
+export default function Dashboard() {
+  const { sessions } = useSession();
   const [overrides, setOverrides] = useState<Record<string, PuzzleType>>({});
   const [selectedType, setSelectedType] = useState<string>("3x3");
   const [range, setRange] = useState<RangeKey>("all");
   const [bucket, setBucket] = useState<BucketMode>("week");
   const [horizon, setHorizon] = useState(4);
-  const [dragging, setDragging] = useState(false);
-  const [theme, setTheme] = useState<Theme>("dark");
   const [palette, setPalette] = useState<ChartPalette | null>(null);
-  const fileInput = useRef<HTMLInputElement>(null);
+
+  const data: ParseResult | null = useMemo(() => {
+    if (sessions.length === 0) return null;
+    return convertTimerSessionsToParseResult(sessions);
+  }, [sessions]);
 
   useEffect(() => {
-    setTheme(readStoredTheme() === "system" ? systemTheme() : ((document.documentElement.dataset.theme as Theme) || "dark"));
-  }, []);
-
-  useLayoutEffect(() => {
     setPalette(readChartPalette());
-  }, [theme]);
-
-  const cycleTheme = useCallback(() => {
-    setTheme((t) => {
-      const nt = nextTheme(t);
-      applyTheme(nt);
-      return nt;
-    });
-  }, []);
-
-  const loadFile = useCallback(async (file: File) => {
-    try {
-      const text = await file.text();
-      const parsed = parseCstimerExport(text);
-      if (parsed.sessions.length === 0) throw new Error("no sessions found");
-      setData((prev) => {
-        if (!prev) return parsed;
-        const merged = [...prev.sessions, ...parsed.sessions];
-        return { sessions: merged };
-      });
-      setFileName(file.name);
-      setError(null);
-      setSelectedType(pickDefaultType(parsed));
-      setOverrides({});
-      setRange("all");
-    } catch {
-      setError("Could not parse that file. Export again from cstimer: Options \u2192 Export (.txt).");
-    }
   }, []);
 
   const effectiveType = useCallback(
@@ -281,51 +243,12 @@ export default function Dashboard({ initialData }: { initialData?: ParseResult }
   if (!data) {
     return (
       <main className="mx-auto flex min-h-screen max-w-3xl flex-col items-center justify-center px-6">
-        <div className="absolute right-4 top-4 sm:right-6 sm:top-6">
-          <ThemeToggle theme={theme} onCycle={cycleTheme} />
-        </div>
-        <CubeHero />
         <h1 className="mb-2 text-center font-sans text-4xl font-bold tracking-tight sm:text-5xl">
-          cstimer{" "}
-          <span className="bg-gradient-to-r from-[var(--amber)] via-[var(--cube-yellow)] to-[var(--amber)] bg-clip-text text-transparent">
-            analyzer
-          </span>
+          CubeTimer
         </h1>
-        <p className="mb-10 max-w-sm text-center text-sm text-[var(--text-dim)]">
-          Upload a cstimer export. We grade without mercy.
+        <p className="max-w-sm text-center text-sm text-[var(--text-dim)]">
+          No sessions yet. Start solving in the Timer tab to see your stats here.
         </p>
-        <div
-          className={`card w-full cursor-pointer border-2 border-dashed p-14 text-center transition-colors ${
-            dragging ? "border-[var(--amber)]" : "border-[var(--border)] hover:border-[var(--amber-dim)]"
-          }`}
-          onClick={() => fileInput.current?.click()}
-          onDragOver={(e) => {
-            e.preventDefault();
-            setDragging(true);
-          }}
-          onDragLeave={() => setDragging(false)}
-          onDrop={(e) => {
-            e.preventDefault();
-            setDragging(false);
-            const f = e.dataTransfer.files?.[0];
-            if (f) void loadFile(f);
-          }}
-        >
-          <p className="text-sm font-medium text-[var(--text)]">Drop your cstimer .txt export here</p>
-          <p className="mt-1.5 text-xs text-[var(--text-faint)]">or click to browse \u2014 nothing leaves your machine</p>
-        </div>
-        <input
-          ref={fileInput}
-          type="file"
-          accept=".txt,.json,application/json,text/plain"
-          className="hidden"
-          onChange={(e) => {
-            const f = e.target.files?.[0];
-            if (f) void loadFile(f);
-            e.target.value = "";
-          }}
-        />
-        {error && <p className="mt-4 text-sm text-[var(--red)]">{error}</p>}
       </main>
     );
   }
@@ -339,23 +262,14 @@ export default function Dashboard({ initialData }: { initialData?: ParseResult }
       <header className="mb-5 flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="font-sans text-xl font-bold tracking-tight">
-            cstimer{" "}
+            CubeTimer{" "}
             <span className="bg-gradient-to-r from-[var(--amber)] via-[var(--cube-yellow)] to-[var(--amber)] bg-clip-text text-transparent">
               analyzer
             </span>
           </h1>
           <p className="text-xs text-[var(--text-faint)]">
-            {fileName} \u00b7 everything analyzed locally in your browser
+            {sessions.length} session{sessions.length !== 1 ? "s" : ""} \u00b7 everything analyzed locally in your browser
           </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <button
-            className="card px-3 py-1.5 text-xs text-[var(--text-dim)] transition-colors hover:text-[var(--text)]"
-            onClick={() => { setData(null); setError(null); }}
-          >
-            Change file
-          </button>
-          <ThemeToggle theme={theme} onCycle={cycleTheme} />
         </div>
       </header>
 

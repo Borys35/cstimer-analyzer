@@ -130,10 +130,4 @@ describe("SessionSidebar", () => {
     const renames = screen.getAllByText(/rename/i);
     expect(renames.length).toBeGreaterThanOrEqual(2);
   });
-
-  it("shows end button for each session", () => {
-    renderWithProvider(<SessionSidebar />, adapter);
-    const ends = screen.getAllByText(/end/i);
-    expect(ends.length).toBeGreaterThanOrEqual(2);
-  });
 });

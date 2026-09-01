@@ -98,7 +98,7 @@ export default function TimerPage() {
 
   return (
     <div
-      className="flex flex-col items-center justify-center min-h-screen select-none"
+      className="flex flex-col items-center justify-center h-full select-none"
       onTouchStart={handleTap}
     >
       <div className="text-sm opacity-60 mb-8 max-w-md text-center whitespace-pre-wrap">

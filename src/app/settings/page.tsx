@@ -5,8 +5,7 @@ import { useSession } from "@/components/SessionProvider";
 import { useImportExport } from "@/lib/use-import-export";
 import { Toast } from "@/components/Toast";
 import type { PuzzleType } from "@/lib/types";
-import type { Theme } from "@/lib/theme";
-import { applyTheme, nextTheme, readStoredTheme, systemTheme } from "@/lib/theme";
+import { useTheme } from "@/components/ThemeProvider";
 
 const PUZZLE_TYPES: PuzzleType[] = ["3x3", "2x2", "Pyraminx", "Square-1"];
 
@@ -14,10 +13,7 @@ export default function SettingsPage() {
   const { settings, updateSettings, sessions, clearAllSessions } = useSession();
   const { toast, setToast, fileInputRef, handleImport, handleExport } = useImportExport();
   const [showClearConfirm, setShowClearConfirm] = useState(false);
-  const [currentTheme, setCurrentTheme] = useState<Theme>(() => {
-    const stored = readStoredTheme();
-    return stored === "system" ? systemTheme() : stored;
-  });
+  const { theme: currentTheme, cycleTheme } = useTheme();
 
   const handleScrambleLength = (puzzle: PuzzleType, value: string) => {
     const num = Number(value);
@@ -143,11 +139,7 @@ export default function SettingsPage() {
             description="Switch between dark, light, and sticker themes"
           >
             <button
-              onClick={() => {
-                const next = nextTheme(currentTheme);
-                setCurrentTheme(next);
-                applyTheme(next);
-              }}
+              onClick={cycleTheme}
               className="px-3 py-1 rounded text-sm bg-surface-hover hover:bg-primary/20 capitalize"
             >
               {currentTheme}

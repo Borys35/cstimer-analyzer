@@ -100,7 +100,7 @@ export function useSessionState(adapter: StorageAdapter): SessionContextValue {
       setSessions((prev) =>
         prev.map((s) =>
           s.id === activeSessionId
-            ? { ...s, solves: [...s.solves, newSolve] }
+            ? { ...s, solves: [...s.solves, newSolve], endedAt: solve.dateSec }
             : s,
         ),
       );

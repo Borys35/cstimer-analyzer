@@ -50,6 +50,35 @@ describe("useTimer", () => {
       expect(result.current.phase).toBe("idle");
       expect(opts.onSolve).toHaveBeenCalledTimes(1);
     });
+
+    it("cancels start when held shorter than startDelayMs", () => {
+      const opts = createOpts({ startDelayMs: 500 });
+      const { result } = renderHook(() => useTimer(opts));
+
+      act(() => result.current.handleKeyDown());
+      expect(result.current.phase).toBe("armed");
+
+      act(() => vi.advanceTimersByTime(300));
+      act(() => result.current.handleKeyUp());
+      expect(result.current.phase).toBe("idle");
+
+      act(() => vi.advanceTimersByTime(600));
+      expect(result.current.phase).toBe("idle");
+      expect(opts.onSolve).not.toHaveBeenCalled();
+    });
+
+    it("starts timing when held for full startDelayMs", () => {
+      const opts = createOpts({ startDelayMs: 500 });
+      const { result } = renderHook(() => useTimer(opts));
+
+      act(() => result.current.handleKeyDown());
+      expect(result.current.phase).toBe("armed");
+
+      act(() => vi.advanceTimersByTime(600));
+      act(() => result.current.handleKeyUp());
+      act(() => vi.advanceTimersByTime(1));
+      expect(result.current.phase).toBe("running");
+    });
   });
 
   describe("with inspection", () => {

@@ -5,7 +5,7 @@ export default function Home() {
   return (
     <div className="flex h-screen">
       <SessionSidebar />
-      <div className="flex-1 overflow-auto">
+      <div className="flex-1 overflow-hidden">
         <TimerPage />
       </div>
     </div>

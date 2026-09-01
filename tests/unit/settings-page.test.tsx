@@ -8,6 +8,13 @@ vi.mock("@/components/SessionProvider", () => ({
   useSession: vi.fn(),
 }));
 
+vi.mock("@/components/ThemeProvider", () => ({
+  useTheme: () => ({
+    theme: "dark" as const,
+    cycleTheme: vi.fn(),
+  }),
+}));
+
 function mockSession(overrides: Record<string, unknown> = {}) {
   const defaults = {
     settings: {

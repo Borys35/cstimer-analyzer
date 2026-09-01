@@ -41,6 +41,7 @@ export function useTimer({
   const inspectionIntervalRef = useRef<ReturnType<typeof setInterval> | number>(0);
   const armedAtRef = useRef(0);
   const inspectionRemainingRef = useRef(0);
+  const solveInFlightRef = useRef(false);
 
   const tick = useCallback(() => {
     const elapsed = performance.now() - startTimeRef.current;
@@ -66,6 +67,7 @@ export function useTimer({
         const timeMs = Math.round(elapsed);
         setDisplayTime(timeMs);
         setPhase("idle");
+        solveInFlightRef.current = false;
         onSolveRef({ timeMs, scramble: scrambleRef, dnf: false, penalty });
         setScramble(generateScramble(puzzleRef, lenRef));
       };
@@ -84,6 +86,7 @@ export function useTimer({
       clearTimeout(delayTimerRef.current);
       setDisplayTime(0);
       setPhase("idle");
+      solveInFlightRef.current = false;
       onSolve({ timeMs: 0, scramble, dnf, penalty });
       setScramble(generateScramble(puzzleType, scrambleLength));
     },
@@ -102,7 +105,12 @@ export function useTimer({
   const handleKeyUp = useCallback(() => {
     if (phase === "armed") {
       const held = performance.now() - armedAtRef.current;
+      if (held < startDelayMs) {
+        setPhase("idle");
+        return;
+      }
       const remaining = Math.max(0, startDelayMs - held);
+      solveInFlightRef.current = true;
 
       if (inspectionEnabled) {
         delayTimerRef.current = setTimeout(() => {
@@ -164,10 +172,10 @@ export function useTimer({
   }, []);
 
   useEffect(() => {
-    if (phase === "idle") {
+    if (!solveInFlightRef.current && phase !== "armed" && phase !== "inspection") {
       setScramble(generateScramble(puzzleType, scrambleLength));
     }
-  }, [puzzleType, scrambleLength, phase]);
+  }, [puzzleType, scrambleLength]);
 
   return {
     phase,
