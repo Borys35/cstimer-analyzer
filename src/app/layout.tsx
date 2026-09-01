@@ -1,10 +1,10 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import "./globals.css";
 import { STORAGE_KEY, THEMES } from "@/lib/theme";
 import { SessionProvider } from "@/components/SessionProvider";
 import { ThemeProvider } from "@/components/ThemeProvider";
-import ThemeToggle from "@/components/ThemeToggle";
+import { MenuProvider } from "@/components/MenuContext";
+import { Navbar } from "@/components/Navbar";
 
 export const metadata: Metadata = {
   title: "CubeTimer",
@@ -27,30 +27,16 @@ export default function RootLayout({
         ) : null}
       </head>
       <body className="h-full flex flex-col antialiased">
-        <ThemeProvider>
-          <SessionProvider>
-            <nav className="flex items-center justify-between px-4 py-2 border-b border-base text-sm bg-surface shrink-0">
-              <Link href="/" className="font-bold hover:opacity-80">
-                CubeTimer
-              </Link>
-              <div className="flex items-center gap-4">
-                <Link href="/" className="opacity-60 hover:opacity-100">
-                  Timer
-                </Link>
-                <Link href="/stats" className="opacity-60 hover:opacity-100">
-                  Stats
-                </Link>
-                <Link href="/settings" className="opacity-60 hover:opacity-100">
-                  Settings
-                </Link>
-                <ThemeToggle />
+        <MenuProvider>
+          <ThemeProvider>
+            <SessionProvider>
+              <Navbar />
+              <div className="flex-1 overflow-auto">
+                {children}
               </div>
-            </nav>
-            <div className="flex-1 overflow-auto">
-              {children}
-            </div>
-          </SessionProvider>
-        </ThemeProvider>
+            </SessionProvider>
+          </ThemeProvider>
+        </MenuProvider>
       </body>
     </html>
   );

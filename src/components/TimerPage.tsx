@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useCallback, useRef } from "react";
+import { useEffect, useCallback, useRef, useState } from "react";
 import { useSession } from "@/components/SessionProvider";
 import { useTimer } from "@/lib/use-timer";
 import { formatTimerTime } from "@/lib/timer-utils";
@@ -30,6 +30,7 @@ export default function TimerPage() {
     phase,
     displayTime,
     scramble,
+    armedAt,
     handleKeyDown,
     handleKeyUp,
     handleTap,
@@ -98,35 +99,47 @@ export default function TimerPage() {
         ? "Solving..."
         : phase === "inspection"
           ? "Inspecting..."
-          : "Press space to start";
+          : "Press any key to start";
+
+  const [holdMs, setHoldMs] = useState(0);
+  useEffect(() => {
+    if (phase !== "armed") {
+      setHoldMs(0);
+      return;
+    }
+    const id = setInterval(() => {
+      setHoldMs(performance.now() - armedAt);
+    }, 30);
+    return () => clearInterval(id);
+  }, [phase, armedAt]);
 
   const timerColor =
     phase === "armed"
-      ? "var(--red)"
-      : phase === "idle"
+      ? holdMs >= settings.startDelayMs
         ? "var(--green)"
-        : "var(--text)";
+        : "var(--red)"
+      : "var(--text)";
 
   return (
     <div
       className="flex flex-col items-center justify-center h-full select-none"
       onTouchStart={handleTap}
     >
-      <div className="text-sm opacity-60 mb-8 max-w-md text-center whitespace-pre-wrap">
+      <div className="text-base opacity-60 mb-8 max-w-md text-center whitespace-pre-wrap">
         {scramble}
       </div>
 
       <div
-        className="text-7xl font-mono font-bold tracking-tight cursor-pointer transition-colors"
+        className="text-8xl font-mono font-bold tracking-tight cursor-pointer transition-colors"
         style={{ color: timerColor }}
         data-testid="timer-display"
       >
         {formatTimerTime(displayTime)}
       </div>
 
-      <div className="text-sm opacity-40 mt-4">{phaseLabel}</div>
+      <div className="text-base opacity-40 mt-4">{phaseLabel}</div>
 
-      <div className="mt-8 text-xs opacity-30">
+      <div className="mt-8 text-sm opacity-30">
         {puzzleType} &middot; {activeSession?.name ?? "No session"}
       </div>
     </div>

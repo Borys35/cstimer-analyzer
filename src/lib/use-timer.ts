@@ -16,6 +16,7 @@ export interface UseTimerReturn {
   phase: TimerPhase;
   displayTime: number;
   scramble: string;
+  armedAt: number;
   handleKeyDown: () => void;
   handleKeyUp: () => void;
   handleTap: () => void;
@@ -181,6 +182,7 @@ export function useTimer({
     phase,
     displayTime,
     scramble,
+    armedAt: armedAtRef.current,
     handleKeyDown,
     handleKeyUp,
     handleTap,

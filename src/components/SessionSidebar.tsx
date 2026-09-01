@@ -3,6 +3,7 @@
 import { useState } from "react";
 import type { PuzzleType, TimerSolve } from "@/lib/types";
 import { useSession } from "@/components/SessionProvider";
+import { useMenu } from "@/components/MenuContext";
 import { formatTimerTime } from "@/lib/timer-utils";
 
 const PUZZLE_OPTIONS: PuzzleType[] = ["3x3", "2x2", "Pyraminx", "Square-1"];
@@ -59,7 +60,7 @@ function SolveList({
   return (
     <div className="mt-1 space-y-0.5" onClick={(e) => e.stopPropagation()}>
       {recent.map((solve, i) => (
-        <div key={solve.id} className="flex items-center gap-1 text-[10px]">
+        <div key={solve.id} className="flex items-center gap-1 text-xs">
           <span className="font-mono opacity-60 w-8 text-right">
             {solve.dnf ? (
               "DNF"
@@ -77,7 +78,7 @@ function SolveList({
             <button
               onClick={() => onUpdateSolve(solve.id, { penalty: solve.penalty === 1 ? 0 : 1 })}
               className={`px-1 py-0.5 rounded transition-colors ${
-                solve.penalty > 0 ? "bg-amber-500/30 text-amber-400" : "bg-surface-hover hover:bg-base"
+                solve.penalty > 0 ? "bg-amber-500/30 text-amber-400" : "bg-[var(--surface-3)] hover:bg-[var(--surface-2)]"
               }`}
               title="+2 penalty"
             >
@@ -86,7 +87,7 @@ function SolveList({
             <button
               onClick={() => onUpdateSolve(solve.id, { dnf: !solve.dnf })}
               className={`px-1 py-0.5 rounded transition-colors ${
-                solve.dnf ? "bg-red-500/30 text-red-400" : "bg-surface-hover hover:bg-base"
+                solve.dnf ? "bg-red-500/30 text-red-400" : "bg-[var(--surface-3)] hover:bg-[var(--surface-2)]"
               }`}
               title="DNF"
             >
@@ -94,7 +95,7 @@ function SolveList({
             </button>
             <button
               onClick={() => onDeleteSolve(solve.id)}
-              className="px-1 py-0.5 rounded bg-surface-hover hover:bg-red-500/20 hover:text-red-400 transition-colors"
+              className="px-1 py-0.5 rounded bg-[var(--surface-3)] hover:bg-red-500/20 hover:text-red-400 transition-colors"
               title="Delete solve"
             >
               x
@@ -121,7 +122,7 @@ export function SessionSidebar() {
   const [showPicker, setShowPicker] = useState(false);
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState("");
-  const [mobileOpen, setMobileOpen] = useState(false);
+  const { mobileOpen, setMobileOpen } = useMenu();
 
   const handleRename = (id: string, currentName: string) => {
     setRenamingId(id);
@@ -136,12 +137,12 @@ export function SessionSidebar() {
   };
 
   const sidebar = (
-    <div className="w-64 h-full bg-surface border-r border-base flex flex-col">
-      <div className="p-3 border-b border-base flex items-center justify-between">
-        <span className="text-sm font-semibold">Sessions</span>
+    <div className="w-64 h-full bg-[var(--surface)] border-r border-[var(--border)] flex flex-col">
+      <div className="p-3 border-b border-[var(--border)] flex items-center justify-between">
+        <span className="text-base font-semibold">Sessions</span>
         <button
           onClick={() => setShowPicker(true)}
-          className="text-xs px-2 py-1 rounded bg-primary/20 hover:bg-primary/30 transition-colors"
+          className="text-sm px-2 py-1 rounded bg-primary/20 hover:bg-primary/30 transition-colors"
         >
           + New Session
         </button>
@@ -153,8 +154,8 @@ export function SessionSidebar() {
           return (
             <li
               key={session.id}
-              className={`px-3 py-2 border-b border-base cursor-pointer transition-colors ${
-                isActive ? "bg-primary/10" : "hover:bg-surface-hover"
+              className={`px-3 py-2 border-b border-[var(--border)] cursor-pointer transition-colors ${
+                isActive ? "bg-primary/10" : "hover:bg-[var(--surface-3)]"
               }`}
               onClick={() => switchSession(session.id)}
             >
@@ -174,16 +175,16 @@ export function SessionSidebar() {
                       onClick={(e) => e.stopPropagation()}
                     />
                   ) : (
-                    <div className="text-sm truncate">{session.name}</div>
+                    <div className="text-base truncate">{session.name}</div>
                   )}
-                  <div className="text-xs opacity-50">{session.puzzleType}</div>
+                  <div className="text-sm opacity-50">{session.puzzleType}</div>
                 </div>
               </div>
 
               <div className="flex gap-1 mt-1" onClick={(e) => e.stopPropagation()}>
                 <button
                   onClick={() => handleRename(session.id, session.name)}
-                  className="text-[10px] px-1.5 py-0.5 rounded bg-surface-hover hover:bg-base transition-colors"
+                  className="text-[10px] px-1.5 py-0.5 rounded bg-[var(--surface-3)] hover:bg-[var(--surface-2)] transition-colors"
                 >
                   rename
                 </button>
@@ -219,27 +220,6 @@ export function SessionSidebar() {
 
   return (
     <>
-      {/* Mobile hamburger */}
-      <button
-        className="fixed top-3 left-3 z-40 md:hidden p-2 rounded bg-surface shadow"
-        onClick={() => setMobileOpen(!mobileOpen)}
-        aria-label="Toggle sessions"
-      >
-        <svg
-          className="w-5 h-5"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M4 6h16M4 12h16M4 18h16"
-          />
-        </svg>
-      </button>
-
       {/* Mobile overlay */}
       {mobileOpen && (
         <div
@@ -249,7 +229,7 @@ export function SessionSidebar() {
       )}
 
       {/* Desktop sidebar */}
-      <div className="hidden md:block h-screen">{sidebar}</div>
+      <div className="hidden md:block h-full">{sidebar}</div>
 
       {/* Mobile slide-in */}
       <div
