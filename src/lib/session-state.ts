@@ -77,8 +77,10 @@ export function useSessionState(adapter: StorageAdapter): SessionContextValue {
     initRef.current = true;
     if (sessions.length === 0) {
       initDefaultSession();
+    } else if (!sessions.find((s) => s.id === activeSessionId)) {
+      setActiveSessionId(sessions[0].id);
     }
-  }, [sessions.length, initDefaultSession]);
+  }, [sessions, activeSessionId, initDefaultSession]);
 
   // Auto-save on every state change (skip first render since initial state comes from adapter)
   const initialSaveSkipped = useRef(false);

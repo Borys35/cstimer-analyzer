@@ -46,7 +46,7 @@ export default function RootLayout({
                 <ThemeToggle />
               </div>
             </nav>
-            <div className="flex-1 overflow-hidden">
+            <div className="flex-1 overflow-auto">
               {children}
             </div>
           </SessionProvider>

@@ -15,8 +15,8 @@ export function NewSessionPicker({
   onClose: () => void;
 }) {
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <div className="bg-base rounded-lg p-6 shadow-xl">
+    <div className="fixed inset-0 flex items-center justify-center z-50">
+      <div className="bg-[var(--surface-2)] border border-[var(--border)] rounded-lg p-6 shadow-2xl w-72">
         <h2 className="text-lg font-semibold mb-4">Pick puzzle</h2>
         <div className="grid grid-cols-2 gap-3">
           {PUZZLE_OPTIONS.map((puzzle) => (
@@ -26,7 +26,7 @@ export function NewSessionPicker({
                 onSelect(puzzle);
                 onClose();
               }}
-              className="px-4 py-3 rounded-md bg-surface hover:bg-surface-hover transition-colors text-sm font-medium"
+              className="px-4 py-3 rounded-md bg-[var(--surface)] border border-[var(--border)] hover:bg-[var(--surface-3)] hover:border-[var(--amber)] transition-colors text-sm font-medium"
             >
               {puzzle}
             </button>
@@ -61,7 +61,16 @@ function SolveList({
       {recent.map((solve, i) => (
         <div key={solve.id} className="flex items-center gap-1 text-[10px]">
           <span className="font-mono opacity-60 w-8 text-right">
-            {solve.dnf ? "DNF" : solve.penalty > 0 ? `+${solve.penalty * 2}` : formatTimerTime(solve.timeMs)}
+            {solve.dnf ? (
+              "DNF"
+            ) : solve.penalty > 0 ? (
+              <span className="flex items-center gap-1">
+                <span className="line-through opacity-50">{formatTimerTime(solve.timeMs)}</span>
+                <span className="text-amber-400">{formatTimerTime(solve.timeMs + 2000)}</span>
+              </span>
+            ) : (
+              formatTimerTime(solve.timeMs)
+            )}
           </span>
           <span className="opacity-30">#{solves.length - (recent.length - 1 - i)}</span>
           <div className="ml-auto flex gap-0.5">

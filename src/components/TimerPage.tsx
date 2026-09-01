@@ -105,7 +105,7 @@ export default function TimerPage() {
       ? "var(--red)"
       : phase === "idle"
         ? "var(--green)"
-        : undefined;
+        : "var(--text)";
 
   return (
     <div
@@ -118,7 +118,7 @@ export default function TimerPage() {
 
       <div
         className="text-7xl font-mono font-bold tracking-tight cursor-pointer transition-colors"
-        style={timerColor ? { color: timerColor } : undefined}
+        style={{ color: timerColor }}
         data-testid="timer-display"
       >
         {formatTimerTime(displayTime)}
