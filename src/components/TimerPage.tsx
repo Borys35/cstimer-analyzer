@@ -44,12 +44,16 @@ export default function TimerPage() {
 
   const handleKeyDownEvent = useCallback(
     (e: KeyboardEvent) => {
-      if (e.code === "Space" && !e.repeat) {
+      if (e.repeat) return;
+      if (phase === "running") {
+        e.preventDefault();
+        handleKeyDown();
+      } else if (e.code === "Space") {
         e.preventDefault();
         handleKeyDown();
       }
     },
-    [handleKeyDown],
+    [phase, handleKeyDown],
   );
 
   const handleKeyUpEvent = useCallback(
@@ -96,6 +100,13 @@ export default function TimerPage() {
           ? "Inspecting..."
           : "Press space to start";
 
+  const timerColor =
+    phase === "armed"
+      ? "var(--red)"
+      : phase === "idle"
+        ? "var(--green)"
+        : undefined;
+
   return (
     <div
       className="flex flex-col items-center justify-center h-full select-none"
@@ -106,7 +117,8 @@ export default function TimerPage() {
       </div>
 
       <div
-        className="text-7xl font-mono font-bold tracking-tight cursor-pointer"
+        className="text-7xl font-mono font-bold tracking-tight cursor-pointer transition-colors"
+        style={timerColor ? { color: timerColor } : undefined}
         data-testid="timer-display"
       >
         {formatTimerTime(displayTime)}

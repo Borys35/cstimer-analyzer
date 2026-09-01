@@ -19,17 +19,17 @@ export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en" data-theme="dark" suppressHydrationWarning>
+    <html lang="en" data-theme="dark" suppressHydrationWarning className="h-full">
       <head>
         <script dangerouslySetInnerHTML={{ __html: noFlashScript }} />
         {process.env.VERCEL_GIT_COMMIT_SHA ? (
           <meta name="git-sha" content={process.env.VERCEL_GIT_COMMIT_SHA} />
         ) : null}
       </head>
-      <body className="min-h-screen antialiased">
+      <body className="h-full flex flex-col antialiased">
         <ThemeProvider>
           <SessionProvider>
-            <nav className="flex items-center justify-between px-4 py-2 border-b border-base text-sm bg-surface">
+            <nav className="flex items-center justify-between px-4 py-2 border-b border-base text-sm bg-surface shrink-0">
               <Link href="/" className="font-bold hover:opacity-80">
                 CubeTimer
               </Link>
@@ -46,7 +46,9 @@ export default function RootLayout({
                 <ThemeToggle />
               </div>
             </nav>
-            {children}
+            <div className="flex-1 overflow-hidden">
+              {children}
+            </div>
           </SessionProvider>
         </ThemeProvider>
       </body>
