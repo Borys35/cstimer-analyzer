@@ -110,6 +110,9 @@ function SolveList({
     return best.id;
   }, [solves]);
 
+  const currentAo5Start = solves.length >= 5 ? solves.length - 5 : -1;
+  const currentAo12Start = solves.length >= 12 ? solves.length - 12 : -1;
+
   if (solves.length === 0) return null;
   const reversed = [...solves].reverse();
   return (
@@ -119,11 +122,19 @@ function SolveList({
         const ao5 = ao5Map.get(origIdx) ?? null;
         const ao12 = ao12Map.get(origIdx) ?? null;
         const isBest = solve.id === bestSolveId;
+        const inAo5 = origIdx >= currentAo5Start;
+        const inAo12 = origIdx >= currentAo12Start;
         return (
           <div
             key={solve.id}
             className={`flex items-center gap-1 text-sm rounded px-1 -mx-1 ${
-              isBest ? "bg-green-500/10" : ""
+              isBest
+                ? "bg-green-500/10"
+                : inAo5
+                  ? "bg-blue-500/8"
+                  : inAo12
+                    ? "bg-purple-500/5"
+                    : ""
             }`}
           >
             <span className={`font-mono whitespace-nowrap ${isBest ? "text-green-400" : "opacity-60"}`}>
@@ -141,12 +152,12 @@ function SolveList({
             <span className="opacity-30 text-xs">#{solves.length - i}</span>
             <div className="ml-auto flex items-center gap-1">
               {ao5 !== null && (
-                <span className="text-xs opacity-40 font-mono" title="ao5">
+                <span className={`text-xs font-mono ${inAo5 ? "text-blue-400" : "opacity-40"}`} title="ao5">
                   {formatTimerTime(ao5)}
                 </span>
               )}
               {ao12 !== null && (
-                <span className="text-xs opacity-40 font-mono" title="ao12">
+                <span className={`text-xs font-mono ${inAo12 && !inAo5 ? "text-purple-400" : inAo5 ? "opacity-40" : "opacity-40"}`} title="ao12">
                   {formatTimerTime(ao12)}
                 </span>
               )}
