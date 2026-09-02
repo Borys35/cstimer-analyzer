@@ -1,6 +1,6 @@
 # Design System
 
-Reference for every visual decision in the cstimer analyzer UI. Change a token here, the whole app updates.
+Reference for every visual decision in the CubeTimer UI. Change a token here, the whole app updates.
 
 ## Design philosophy
 
@@ -131,6 +131,10 @@ Two font families loaded via Google Fonts in `globals.css`:
 | Stat chip value | `text-base` | 400 | JetBrains Mono |
 | Filter labels | `text-[11px]` | 400 | DM Sans |
 | Tier pill | `text-[0.7rem]` | 700 uppercase | DM Sans |
+| Timer display | `text-9xl` | 700 | JetBrains Mono |
+| Scramble text | `text-[36px]` | 500 | DM Sans |
+| Timer phase label | `text-xl` | 400 | DM Sans |
+| Timer info | `text-base` | 400 | DM Sans |
 
 ---
 
@@ -229,6 +233,38 @@ border-radius: 0.4rem;
 box-shadow: inset 0 -3px 0 rgba(0,0,0,0.25), inset 0 2px 0 rgba(255,255,255,0.22);
 ```
 
+### Timer page
+
+Full-height centered layout. Elements stacked vertically:
+
+1. **Scramble**: `text-[36px] font-medium opacity-60 tracking-widest`, max-w-3xl, centered
+2. **Timer display**: `text-9xl font-mono font-bold`, color varies by phase:
+   - idle: `var(--text)` (default)
+   - armed (hold < threshold): `var(--red)`
+   - armed (hold ≥ threshold): `var(--green)`
+   - running with blind mode: shows "Solving..." instead of time
+3. **Phase label**: `text-xl opacity-40`
+4. **Info line**: `text-base opacity-30` (puzzle type · session name)
+5. **Hamburger button**: `absolute top-3 left-3`, mobile only, disabled during solve
+
+### Session sidebar
+
+Desktop: fixed `w-64` panel on the left, `bg-[var(--surface)]`, `border-r border-[var(--border)]`.
+Mobile: slide-in overlay from left (`fixed inset-y-0 left-0`), toggled by hamburger.
+
+Structure (top to bottom):
+1. **Dropdown button**: shows active session name · puzzle type · solve count
+2. **Dropdown menu**: all sessions sorted newest-first, each showing name + puzzle + count
+3. **Stats bar**: 2-column grid — best, ao5, best ao5, ao12, best ao12
+4. **Solve list**: all solves (scrollable), each with time, +2/DNF/delete buttons
+
+Auto-collapse: sidebar width → 0 during armed/running phases (300ms transition).
+
+### Navbar
+
+Fixed top bar: `bg-[var(--surface)] border-b border-[var(--border)] shrink-0`.
+Left: "CubeTimer" brand link. Right: Timer/Stats/Settings links + ThemeToggle.
+
 ---
 
 ## Layout
@@ -236,13 +272,20 @@ box-shadow: inset 0 -3px 0 rgba(0,0,0,0.25), inset 0 2px 0 rgba(255,255,255,0.22
 ### Page structure
 
 ```
-Upload state:
-  Centered column (max-w-3xl), vertically centered
-  CubeHero → Title → Subtitle → Drop zone
+Layout (all pages):
+  Navbar (fixed top)
+  Content area (flex-1 overflow-auto)
 
-Dashboard state:
-  Full-width column (max-w-6xl), padded
-  Header → Filters → Scoreboard Hero → Quick Stats → Chart → Verdict → Prescriptions → Sessions
+Timer page (/):
+  Flex row: Sidebar (w-64, collapses to 0 during solve) + TimerPage (flex-1)
+  TimerPage: centered column — scramble, timer display, phase label, info
+  Mobile: hamburger in timer container, sidebar slides in from left
+
+Stats page (/stats):
+  Dashboard component (full width, no sidebar)
+
+Settings page (/settings):
+  Settings form (max-w-2xl centered)
 ```
 
 ### Breakpoints
@@ -312,6 +355,9 @@ If you add new chart series, add corresponding `--series-*` tokens in all three 
 | Score bar fill | `width` | 0.6s | `cubic-bezier(0.22, 1, 0.36, 1)` | Respected |
 | Hero tile hover | `transform` | 0.35s | `cubic-bezier(0.34, 1.56, 0.64, 1)` | Respected |
 | Body background | `background-color` | 0.2s | `ease` | Not explicitly disabled |
+| Sidebar collapse | `width` | 0.3s | `ease` | Not explicitly disabled |
+| Mobile sidebar | `transform` | 0.2s | `ease` | Not explicitly disabled |
+| Timer color | `color` | 0.15s | `ease` | Not explicitly disabled |
 
 ### Reduced motion
 
@@ -372,9 +418,17 @@ The `.score-hero` layout is the only component using custom CSS for responsive b
 | File | What it controls |
 |---|---|
 | `src/app/globals.css` | All color tokens, typography imports, component styles, animations |
-| `src/app/layout.tsx` | HTML structure, no-flash theme script, metadata |
+| `src/app/layout.tsx` | HTML structure, no-flash theme script, metadata, providers |
+| `src/app/page.tsx` | Timer page layout — sidebar + timer, auto-collapse logic |
 | `src/lib/theme.ts` | Theme type, localStorage persistence, chart palette reader |
+| `src/lib/use-timer.ts` | Timer phase machine, scramble generation, keyboard/touch handlers |
+| `src/lib/types.ts` | TimerSettings, TimerSession, TimerSolve types |
+| `src/components/TimerPage.tsx` | Timer display, scramble, blind mode, hamburger button |
+| `src/components/TimerPhaseContext.tsx` | Shares timer phase between TimerPage and page layout |
+| `src/components/SessionSidebar.tsx` | Dropdown picker, stats bar, solve list, session management |
+| `src/components/Navbar.tsx` | Top navigation bar, page links, theme toggle |
+| `src/components/MenuContext.tsx` | Mobile sidebar open/close state |
+| `src/components/ThemeProvider.tsx` | Theme context, cycle function, localStorage persistence |
 | `src/components/ScoreboardHero.tsx` | Gauge ring SVG, score display, sub-score bars |
 | `src/components/Dashboard.tsx` | Upload screen, filter bar, chart, prescriptions, sessions |
-| `src/components/CubeHero.tsx` | 3x3 cube tile grid on upload screen |
-| `src/components/ThemeToggle.tsx` | Theme cycle button |
+| `src/components/Toast.tsx` | Toast notification with optional undo action |
