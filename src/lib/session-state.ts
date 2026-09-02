@@ -8,6 +8,7 @@ export interface SessionContextValue {
   activeSession: TimerSession | null;
   settings: TimerSettings;
   addSolve: (solve: Omit<TimerSolve, "id">) => void;
+  restoreSolve: (sessionId: string, solve: Omit<TimerSolve, "id">) => void;
   createSession: (puzzleType: PuzzleType) => void;
   switchSession: (sessionId: string) => void;
   deleteSession: (sessionId: string) => void;
@@ -108,6 +109,20 @@ export function useSessionState(adapter: StorageAdapter): SessionContextValue {
       );
     },
     [activeSessionId],
+  );
+
+  const restoreSolve = useCallback(
+    (sessionId: string, solve: Omit<TimerSolve, "id">) => {
+      const newSolve: TimerSolve = { ...solve, id: uid() };
+      setSessions((prev) =>
+        prev.map((s) => {
+          if (s.id !== sessionId) return s;
+          const solves = [...s.solves, newSolve].sort((a, b) => a.dateSec - b.dateSec);
+          return { ...s, solves, endedAt: Math.max(...solves.map((x) => x.dateSec)) };
+        }),
+      );
+    },
+    [],
   );
 
   const createSession = useCallback(
@@ -214,6 +229,7 @@ export function useSessionState(adapter: StorageAdapter): SessionContextValue {
     activeSession,
     settings,
     addSolve,
+    restoreSolve,
     createSession,
     switchSession,
     deleteSession,

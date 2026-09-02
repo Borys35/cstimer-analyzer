@@ -296,6 +296,7 @@ export function SessionSidebar() {
     deleteSolve,
     updateSolve,
     addSolve,
+    restoreSolve,
   } = useSession();
 
   const [showPicker, setShowPicker] = useState(false);
@@ -309,7 +310,8 @@ export function SessionSidebar() {
     setToast({
       message: "Solve deleted",
       onUndo: () => {
-        addSolve({
+        if (!activeSession) return;
+        restoreSolve(activeSession.id, {
           timeMs: solve.timeMs,
           dnf: solve.dnf,
           penalty: solve.penalty,
