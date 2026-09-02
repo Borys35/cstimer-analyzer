@@ -1,6 +1,6 @@
 # Design System
 
-Reference for every visual decision in the CubeTimer UI. Change a token here, the whole app updates.
+Reference for every visual decision in the CubTimer UI. Change a token here, the whole app updates.
 
 ## Design philosophy
 
@@ -267,7 +267,7 @@ Auto-collapse: sidebar width → 0 during armed/running phases (300ms transition
 ### Navbar
 
 Fixed top bar: `bg-[var(--surface)] border-b border-[var(--border)] shrink-0`.
-Left: "CubeTimer" brand link. Right: Timer/Stats/Settings links + ThemeToggle.
+Left: "CubTimer" brand link. Right: Timer/Stats/Settings links + ThemeToggle.
 
 ---
 

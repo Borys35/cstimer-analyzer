@@ -67,10 +67,14 @@ function computeSessionStats(solves: TimerSolve[]) {
   const best = bestTime(solves);
   const ao5Arr = rollingAverage(solves.map(toSolve), 5);
   const ao12Arr = rollingAverage(solves.map(toSolve), 12);
-  const currentAo5 = ao5Arr.length > 0 ? ao5Arr[ao5Arr.length - 1].ms : null;
-  const bestAo5 = ao5Arr.length > 0 ? Math.min(...ao5Arr.map((a) => a.ms)) : null;
-  const currentAo12 = ao12Arr.length > 0 ? ao12Arr[ao12Arr.length - 1].ms : null;
-  const bestAo12 = ao12Arr.length > 0 ? Math.min(...ao12Arr.map((a) => a.ms)) : null;
+  const lastAo5Ms = ao5Arr.length > 0 ? ao5Arr[ao5Arr.length - 1].ms : null;
+  const currentAo5 = lastAo5Ms !== null && isFinite(lastAo5Ms) ? lastAo5Ms : null;
+  const ao5Valid = ao5Arr.filter((a) => isFinite(a.ms));
+  const bestAo5 = ao5Valid.length > 0 ? Math.min(...ao5Valid.map((a) => a.ms)) : null;
+  const lastAo12Ms = ao12Arr.length > 0 ? ao12Arr[ao12Arr.length - 1].ms : null;
+  const currentAo12 = lastAo12Ms !== null && isFinite(lastAo12Ms) ? lastAo12Ms : null;
+  const ao12Valid = ao12Arr.filter((a) => isFinite(a.ms));
+  const bestAo12 = ao12Valid.length > 0 ? Math.min(...ao12Valid.map((a) => a.ms)) : null;
   return { best, currentAo5, bestAo5, currentAo12, bestAo12 };
 }
 
@@ -87,18 +91,18 @@ function SolveList({
 }) {
   const ao5Map = useMemo(() => {
     const arr = rollingAverage(solves.map(toSolve), 5);
-    const map = new Map<number, number>();
+    const map = new Map<number, number | null>();
     for (let i = 0; i < arr.length; i++) {
-      map.set(i + 4, arr[i].ms);
+      map.set(i + 4, isFinite(arr[i].ms) ? arr[i].ms : null);
     }
     return map;
   }, [solves]);
 
   const ao12Map = useMemo(() => {
     const arr = rollingAverage(solves.map(toSolve), 12);
-    const map = new Map<number, number>();
+    const map = new Map<number, number | null>();
     for (let i = 0; i < arr.length; i++) {
-      map.set(i + 11, arr[i].ms);
+      map.set(i + 11, isFinite(arr[i].ms) ? arr[i].ms : null);
     }
     return map;
   }, [solves]);

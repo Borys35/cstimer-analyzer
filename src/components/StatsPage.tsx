@@ -32,8 +32,8 @@ function computeStats(solves: TimerSolve[]) {
   const best = bestTime(solves);
   const ao5 = rollingAverage(solves.map(toSolve), 5);
   const ao12 = rollingAverage(solves.map(toSolve), 12);
-  const lastAo5 = ao5.length > 0 ? ao5[ao5.length - 1].ms : null;
-  const lastAo12 = ao12.length > 0 ? ao12[ao12.length - 1].ms : null;
+  const lastAo5 = ao5.length > 0 && isFinite(ao5[ao5.length - 1].ms) ? ao5[ao5.length - 1].ms : null;
+  const lastAo12 = ao12.length > 0 && isFinite(ao12[ao12.length - 1].ms) ? ao12[ao12.length - 1].ms : null;
   return { total, dnfs, best, lastAo5, lastAo12 };
 }
 

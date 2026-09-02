@@ -35,13 +35,22 @@ export function separateJunk(solves: Solve[]): JunkSplit {
 
 export function rollingAverage(solves: Solve[], n: number): { t: number; ms: number }[] {
   const out: { t: number; ms: number }[] = [];
-  let sum = 0;
-  const window: number[] = [];
   for (let i = 0; i < solves.length; i++) {
-    window.push(solves[i].timeMs);
-    sum += solves[i].timeMs;
-    if (window.length > n) sum -= window.shift() as number;
-    if (window.length === n) out.push({ t: solves[i].dateSec * 1000, ms: sum / n });
+    if (i < n - 1) continue;
+    const window = solves.slice(i - n + 1, i + 1);
+    const dnfs = window.filter((s) => s.dnf).length;
+    if (dnfs > 1) {
+      out.push({ t: solves[i].dateSec * 1000, ms: Infinity });
+      continue;
+    }
+    const times = window
+      .filter((s) => !s.dnf)
+      .map((s) => s.timeMs + (s.penalty > 0 ? 2000 : 0));
+    times.sort((a, b) => a - b);
+    times.shift();
+    times.pop();
+    const mean = times.reduce((a, b) => a + b, 0) / times.length;
+    out.push({ t: solves[i].dateSec * 1000, ms: mean });
   }
   return out;
 }

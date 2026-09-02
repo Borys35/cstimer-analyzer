@@ -7,7 +7,7 @@ import { MenuProvider } from "@/components/MenuContext";
 import { Navbar } from "@/components/Navbar";
 
 export const metadata: Metadata = {
-  title: "CubeTimer",
+  title: "CubTimer",
   description: "Strict progress analysis for cstimer exports",
 };
 

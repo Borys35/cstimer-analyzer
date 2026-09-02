@@ -15,7 +15,7 @@ export function Navbar() {
           {/* Icon only — mobile */}
           <Image
             src="/logo.svg"
-            alt="CubeTimer"
+            alt="CubTimer"
             width={34}
             height={28}
             className="md:hidden"
@@ -24,7 +24,7 @@ export function Navbar() {
           {/* Logo with text — desktop, theme-aware */}
           <Image
             src={theme === "light" ? "/logo-light.svg" : "/logo-dark.svg"}
-            alt="CubeTimer"
+            alt="CubTimer"
             width={130}
             height={28}
             className="hidden md:block"

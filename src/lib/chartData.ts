@@ -74,7 +74,15 @@ function computeSessionBestAo(solves: Solve[], n: number): number | null {
   for (let i = 0; i <= clean.length - n; i++) {
     const window = clean.slice(i, i + n);
     if (window.length < n) break;
-    const mean = window.reduce((a, b) => a + b.timeMs, 0) / n;
+    const dnfs = window.filter((s) => s.dnf).length;
+    if (dnfs > 1) continue;
+    const times = window
+      .filter((s) => !s.dnf)
+      .map((s) => s.timeMs + (s.penalty > 0 ? 2000 : 0));
+    times.sort((a, b) => a - b);
+    times.shift();
+    times.pop();
+    const mean = times.reduce((a, b) => a + b, 0) / times.length;
     if (mean < best) best = mean;
   }
   return best === Infinity ? null : best;
@@ -170,9 +178,9 @@ export function buildChartRows(input: BuildChartRowsInput): ChartRow[] {
   const ao12 = rollingAverage(sessionMeans, 12);
   const ao100 = rollingAverage(sessionMeans, 100);
 
-  for (const p of ao5) rowAt(p.t).ao5 = p.ms;
-  for (const p of ao12) rowAt(p.t).ao12 = p.ms;
-  for (const p of ao100) rowAt(p.t).ao100 = p.ms;
+  for (const p of ao5) if (isFinite(p.ms)) rowAt(p.t).ao5 = p.ms;
+  for (const p of ao12) if (isFinite(p.ms)) rowAt(p.t).ao12 = p.ms;
+  for (const p of ao100) if (isFinite(p.ms)) rowAt(p.t).ao100 = p.ms;
 
   const volBuckets = (
     bucket === "day" ? dailyBuckets(clean) : weeklyBuckets(clean)

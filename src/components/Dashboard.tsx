@@ -244,7 +244,7 @@ export default function Dashboard() {
     return (
       <main className="mx-auto flex min-h-screen max-w-3xl flex-col items-center justify-center px-6">
         <h1 className="mb-2 text-center font-sans text-4xl font-bold tracking-tight sm:text-5xl">
-          CubeTimer
+          CubTimer
         </h1>
         <p className="max-w-sm text-center text-sm text-[var(--text-dim)]">
           No sessions yet. Start solving in the Timer tab to see your stats here.
@@ -262,7 +262,7 @@ export default function Dashboard() {
       <header className="mb-5 flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="font-sans text-xl font-bold tracking-tight">
-            CubeTimer{" "}
+            CubTimer{" "}
             <span className="bg-gradient-to-r from-[var(--amber)] via-[var(--cube-yellow)] to-[var(--amber)] bg-clip-text text-transparent">
               analyzer
             </span>

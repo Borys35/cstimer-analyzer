@@ -1,4 +1,4 @@
-# CubeTimer
+# CubTimer
 
 A fast, client-side speedcubing timer with strict progress analysis. Import [cstimer](https://cstimer.net/) sessions or time directly in the app — get a progress chart, a headline grade from 0–100, three sub-scores, and a coach that does not lie to you.
 
@@ -63,20 +63,20 @@ Dark → Light → Sticker. Sticker is the toy-box mode: cube-sticker-colored pa
 
 Three sub-scores feed one headline number. Weights shift by your current level:
 
-| Level | Improvement | Consistency | Frequency |
-|---|---|---|---|
-| sub-60 | 45% | 15% | 40% |
-| sub-40 | 40% | 25% | 35% |
-| sub-25 | 35% | 35% | 30% |
-| sub-15 | 30% | 40% | 30% |
-| sub-10 | 25% | 45% | 30% |
+| Level  | Improvement | Consistency | Frequency |
+| ------ | ----------- | ----------- | --------- |
+| sub-60 | 45%         | 15%         | 40%       |
+| sub-40 | 40%         | 25%         | 35%       |
+| sub-25 | 35%         | 35%         | 30%       |
+| sub-15 | 30%         | 40%         | 30%       |
+| sub-10 | 25%         | 45%         | 30%       |
 
-| Headline | Verdict |
-|---|---|
-| ≥ 80 | good |
-| 60–79 | decent |
-| 40–59 | bad |
-| < 40 | horrible |
+| Headline | Verdict  |
+| -------- | -------- |
+| ≥ 80     | good     |
+| 60–79    | decent   |
+| 40–59    | bad      |
+| < 40     | horrible |
 
 Full scoring rationale in [`docs/research-scoring.md`](docs/research-scoring.md) and [`docs/research-prescriptions.md`](docs/research-prescriptions.md).
 
