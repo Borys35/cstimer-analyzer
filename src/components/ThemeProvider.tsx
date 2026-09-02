@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useState, useCallback } from "react";
+import { createContext, useContext, useState, useCallback, useEffect } from "react";
 import type { Theme } from "@/lib/theme";
 import { readStoredTheme, systemTheme, applyTheme, nextTheme } from "@/lib/theme";
 
@@ -26,12 +26,12 @@ export function useTheme() {
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [theme, setTheme] = useState<Theme>(initTheme);
 
+  useEffect(() => {
+    applyTheme(theme);
+  }, [theme]);
+
   const cycleTheme = useCallback(() => {
-    setTheme((t) => {
-      const nt = nextTheme(t);
-      applyTheme(nt);
-      return nt;
-    });
+    setTheme((t) => nextTheme(t));
   }, []);
 
   return (
