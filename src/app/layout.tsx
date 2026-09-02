@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Analytics } from "@vercel/analytics/react";
 import "./globals.css";
 import { STORAGE_KEY, THEMES } from "@/lib/theme";
 import { SessionProvider } from "@/components/SessionProvider";
@@ -37,6 +38,7 @@ export default function RootLayout({
             </SessionProvider>
           </ThemeProvider>
         </MenuProvider>
+        <Analytics />
       </body>
     </html>
   );
