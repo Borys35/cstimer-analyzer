@@ -133,7 +133,7 @@ export default function TimerPage() {
 
   return (
     <div
-      className="flex flex-col items-center justify-center h-full select-none relative"
+      className="flex flex-col items-center justify-center h-full select-none relative px-12"
       onTouchStart={handleKeyDown}
       onTouchEnd={handleKeyUp}
     >
@@ -148,7 +148,7 @@ export default function TimerPage() {
         </svg>
       </button>
 
-      <div className="text-[36px] opacity-60 mb-8 max-w-lg text-center whitespace-pre-wrap leading-snug">
+      <div className="text-[36px] font-medium opacity-70 mb-8 max-w-9xl text-center whitespace-pre-wrap leading-snug tracking-[0.15em]">
         {scramble}
       </div>
 

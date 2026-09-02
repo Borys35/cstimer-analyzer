@@ -12,7 +12,7 @@ function TimerLayout() {
     <div className="flex h-full">
       <div
         className={`h-full overflow-hidden transition-all duration-300 ${
-          collapsed ? "w-0" : "w-64"
+          collapsed ? "w-0" : "w-0 md:w-64"
         }`}
       >
         <SessionSidebar />
