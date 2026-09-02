@@ -91,11 +91,11 @@ function SolveList({
     <div className="space-y-0.5" onClick={(e) => e.stopPropagation()}>
       {reversed.map((solve, i) => (
         <div key={solve.id} className="flex items-center gap-1 text-xs">
-          <span className="font-mono opacity-60 w-8 text-right">
+          <span className="font-mono opacity-60 text-right whitespace-nowrap">
             {solve.dnf ? (
               "DNF"
             ) : solve.penalty > 0 ? (
-              <span className="flex items-center gap-1">
+              <span className="inline-flex items-center gap-1">
                 <span className="line-through opacity-50">{formatTimerTime(solve.timeMs)}</span>
                 <span className="text-amber-400">{formatTimerTime(solve.timeMs + 2000)}</span>
               </span>
@@ -169,17 +169,27 @@ export function SessionSidebar() {
     renameSession,
     deleteSolve,
     updateSolve,
+    addSolve,
   } = useSession();
 
   const [showPicker, setShowPicker] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
-  const [toast, setToast] = useState<string | null>(null);
+  const [toast, setToast] = useState<{ message: string; onUndo?: () => void } | null>(null);
   const { mobileOpen, setMobileOpen } = useMenu();
 
   const handleUndoDelete = (solve: TimerSolve) => {
-    // We store enough to recreate the solve; the actual re-add needs addSolve from context
-    // For now, just show the toast — re-add is not supported without addSolve
-    setToast("Solve deleted");
+    setToast({
+      message: "Solve deleted",
+      onUndo: () => {
+        addSolve({
+          timeMs: solve.timeMs,
+          dnf: solve.dnf,
+          penalty: solve.penalty,
+          scramble: solve.scramble,
+          dateSec: solve.dateSec,
+        });
+      },
+    });
   };
 
   const sidebar = (
@@ -266,7 +276,13 @@ export function SessionSidebar() {
         />
       )}
 
-      {toast && <Toast message={toast} onClose={() => setToast(null)} />}
+      {toast && (
+        <Toast
+          message={toast.message}
+          onClose={() => setToast(null)}
+          action={toast.onUndo ? { label: "Undo", onClick: toast.onUndo } : undefined}
+        />
+      )}
     </div>
   );
 

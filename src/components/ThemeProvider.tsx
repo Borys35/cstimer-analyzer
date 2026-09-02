@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useState, useCallback, useEffect } from "react";
+import { createContext, useContext, useState, useCallback } from "react";
 import type { Theme } from "@/lib/theme";
 import { readStoredTheme, systemTheme, applyTheme, nextTheme } from "@/lib/theme";
 
@@ -11,6 +11,12 @@ interface ThemeContextValue {
 
 const ThemeContext = createContext<ThemeContextValue | null>(null);
 
+function initTheme(): Theme {
+  if (typeof window === "undefined") return "dark";
+  const stored = readStoredTheme();
+  return stored === "system" ? systemTheme() : stored;
+}
+
 export function useTheme() {
   const ctx = useContext(ThemeContext);
   if (!ctx) throw new Error("useTheme must be used within ThemeProvider");
@@ -18,12 +24,7 @@ export function useTheme() {
 }
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [theme, setTheme] = useState<Theme>("dark");
-
-  useEffect(() => {
-    const stored = readStoredTheme();
-    setTheme(stored === "system" ? systemTheme() : stored);
-  }, []);
+  const [theme, setTheme] = useState<Theme>(initTheme);
 
   const cycleTheme = useCallback(() => {
     setTheme((t) => {
