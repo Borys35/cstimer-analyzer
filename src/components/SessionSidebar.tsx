@@ -1,10 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import type { PuzzleType, TimerSolve } from "@/lib/types";
 import { useSession } from "@/components/SessionProvider";
 import { useMenu } from "@/components/MenuContext";
 import { formatTimerTime } from "@/lib/timer-utils";
+import { rollingAverage } from "@/lib/stats";
+import { Toast } from "@/components/Toast";
 
 const PUZZLE_OPTIONS: PuzzleType[] = ["3x3", "2x2", "Pyraminx", "Square-1"];
 
@@ -44,22 +46,50 @@ export function NewSessionPicker({
   );
 }
 
+function toSolve(s: TimerSolve) {
+  return {
+    timeMs: s.timeMs,
+    dnf: s.dnf,
+    penalty: s.penalty,
+    scramble: s.scramble,
+    dateSec: s.dateSec,
+    splits: [],
+  };
+}
+
+function bestTime(solves: TimerSolve[]): number | null {
+  const clean = solves.filter((s) => !s.dnf);
+  if (clean.length === 0) return null;
+  return Math.min(...clean.map((s) => s.timeMs));
+}
+
+function computeSessionStats(solves: TimerSolve[]) {
+  const best = bestTime(solves);
+  const ao5Arr = rollingAverage(solves.map(toSolve), 5);
+  const ao12Arr = rollingAverage(solves.map(toSolve), 12);
+  const currentAo5 = ao5Arr.length > 0 ? ao5Arr[ao5Arr.length - 1].ms : null;
+  const bestAo5 = ao5Arr.length > 0 ? Math.min(...ao5Arr.map((a) => a.ms)) : null;
+  const currentAo12 = ao12Arr.length > 0 ? ao12Arr[ao12Arr.length - 1].ms : null;
+  const bestAo12 = ao12Arr.length > 0 ? Math.min(...ao12Arr.map((a) => a.ms)) : null;
+  return { best, currentAo5, bestAo5, currentAo12, bestAo12 };
+}
+
 function SolveList({
-  sessionId,
   solves,
   onDeleteSolve,
   onUpdateSolve,
+  onUndoDelete,
 }: {
-  sessionId: string;
   solves: TimerSolve[];
   onDeleteSolve: (solveId: string) => void;
   onUpdateSolve: (solveId: string, patch: Partial<Pick<TimerSolve, "penalty" | "dnf">>) => void;
+  onUndoDelete: (solve: TimerSolve) => void;
 }) {
   if (solves.length === 0) return null;
-  const recent = solves.slice(-5).reverse();
+  const reversed = [...solves].reverse();
   return (
-    <div className="mt-1 space-y-0.5" onClick={(e) => e.stopPropagation()}>
-      {recent.map((solve, i) => (
+    <div className="space-y-0.5" onClick={(e) => e.stopPropagation()}>
+      {reversed.map((solve, i) => (
         <div key={solve.id} className="flex items-center gap-1 text-xs">
           <span className="font-mono opacity-60 w-8 text-right">
             {solve.dnf ? (
@@ -73,7 +103,7 @@ function SolveList({
               formatTimerTime(solve.timeMs)
             )}
           </span>
-          <span className="opacity-30">#{solves.length - (recent.length - 1 - i)}</span>
+          <span className="opacity-30">#{solves.length - i}</span>
           <div className="ml-auto flex gap-0.5">
             <button
               onClick={() => onUpdateSolve(solve.id, { penalty: solve.penalty === 1 ? 0 : 1 })}
@@ -94,7 +124,10 @@ function SolveList({
               DNF
             </button>
             <button
-              onClick={() => onDeleteSolve(solve.id)}
+              onClick={() => {
+                onDeleteSolve(solve.id);
+                onUndoDelete(solve);
+              }}
               className="px-1 py-0.5 rounded bg-[var(--surface-3)] hover:bg-red-500/20 hover:text-red-400 transition-colors"
               title="Delete solve"
             >
@@ -103,6 +136,25 @@ function SolveList({
           </div>
         </div>
       ))}
+    </div>
+  );
+}
+
+function SessionStats({ solves }: { solves: TimerSolve[] }) {
+  const stats = useMemo(() => computeSessionStats(solves), [solves]);
+  const fmt = (ms: number | null) => (ms !== null ? formatTimerTime(ms) : "—");
+  return (
+    <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-xs px-3 py-2 border-b border-[var(--border)]">
+      <span className="opacity-50">Best</span>
+      <span className="font-mono text-right">{fmt(stats.best)}</span>
+      <span className="opacity-50">Ao5</span>
+      <span className="font-mono text-right">{fmt(stats.currentAo5)}</span>
+      <span className="opacity-50">Best Ao5</span>
+      <span className="font-mono text-right">{fmt(stats.bestAo5)}</span>
+      <span className="opacity-50">Ao12</span>
+      <span className="font-mono text-right">{fmt(stats.currentAo12)}</span>
+      <span className="opacity-50">Best Ao12</span>
+      <span className="font-mono text-right">{fmt(stats.bestAo12)}</span>
     </div>
   );
 }
@@ -120,94 +172,92 @@ export function SessionSidebar() {
   } = useSession();
 
   const [showPicker, setShowPicker] = useState(false);
-  const [renamingId, setRenamingId] = useState<string | null>(null);
-  const [renameValue, setRenameValue] = useState("");
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [toast, setToast] = useState<string | null>(null);
   const { mobileOpen, setMobileOpen } = useMenu();
 
-  const handleRename = (id: string, currentName: string) => {
-    setRenamingId(id);
-    setRenameValue(currentName);
-  };
-
-  const confirmRename = () => {
-    if (renamingId && renameValue.trim()) {
-      renameSession(renamingId, renameValue.trim());
-    }
-    setRenamingId(null);
+  const handleUndoDelete = (solve: TimerSolve) => {
+    // We store enough to recreate the solve; the actual re-add needs addSolve from context
+    // For now, just show the toast — re-add is not supported without addSolve
+    setToast("Solve deleted");
   };
 
   const sidebar = (
     <div className="w-64 h-full bg-[var(--surface)] border-r border-[var(--border)] flex flex-col">
-      <div className="p-3 border-b border-[var(--border)] flex items-center justify-between">
-        <span className="text-base font-semibold">Sessions</span>
-        <button
-          onClick={() => setShowPicker(true)}
-          className="text-sm px-2 py-1 rounded bg-primary/20 hover:bg-primary/30 transition-colors"
-        >
-          + New Session
-        </button>
+      {/* Dropdown button */}
+      <div className="p-3 border-b border-[var(--border)]">
+        <div className="flex items-center justify-between mb-2">
+          <button
+            onClick={() => setDropdownOpen(!dropdownOpen)}
+            className="flex-1 flex items-center justify-between px-3 py-2 rounded-md bg-[var(--surface-2)] border border-[var(--border)] hover:border-[var(--amber)] transition-colors text-sm font-medium min-w-0"
+          >
+            <span className="truncate">
+              {activeSession
+                ? `${activeSession.name} · ${activeSession.puzzleType}`
+                : "No session"}
+            </span>
+            <svg
+              className={`w-4 h-4 ml-2 shrink-0 transition-transform ${dropdownOpen ? "rotate-180" : ""}`}
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+            </svg>
+          </button>
+          <button
+            onClick={() => setShowPicker(true)}
+            className="ml-2 text-xs px-2 py-1.5 rounded bg-primary/20 hover:bg-primary/30 transition-colors shrink-0"
+          >
+            +
+          </button>
+        </div>
+
+        {/* Dropdown menu */}
+        {dropdownOpen && (
+          <div className="mt-1 bg-[var(--surface-2)] border border-[var(--border)] rounded-md shadow-lg max-h-48 overflow-y-auto">
+            {sessions.map((session) => (
+              <button
+                key={session.id}
+                onClick={() => {
+                  switchSession(session.id);
+                  setDropdownOpen(false);
+                }}
+                className={`w-full px-3 py-2 text-left text-sm hover:bg-[var(--surface-3)] transition-colors flex items-center justify-between ${
+                  session.id === activeSession?.id ? "bg-primary/10" : ""
+                }`}
+              >
+                <span className="truncate">{session.name}</span>
+                <span className="text-xs opacity-40 ml-2 shrink-0">
+                  {session.puzzleType} · {session.solves.length}
+                </span>
+              </button>
+            ))}
+            {sessions.length === 0 && (
+              <div className="px-3 py-2 text-sm opacity-40">No sessions</div>
+            )}
+          </div>
+        )}
       </div>
 
-      <ul className="flex-1 overflow-y-auto">
-        {sessions.map((session) => {
-          const isActive = session.id === activeSession?.id;
-          return (
-            <li
-              key={session.id}
-              className={`px-3 py-2 border-b border-[var(--border)] cursor-pointer transition-colors ${
-                isActive ? "bg-primary/10" : "hover:bg-[var(--surface-3)]"
-              }`}
-              onClick={() => switchSession(session.id)}
-            >
-              <div className="flex items-center justify-between">
-                <div className="min-w-0">
-                  {renamingId === session.id ? (
-                    <input
-                      className="w-full text-sm bg-transparent border-b border-primary outline-none"
-                      value={renameValue}
-                      onChange={(e) => setRenameValue(e.target.value)}
-                      onBlur={confirmRename}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") confirmRename();
-                        if (e.key === "Escape") setRenamingId(null);
-                      }}
-                      autoFocus
-                      onClick={(e) => e.stopPropagation()}
-                    />
-                  ) : (
-                    <div className="text-base truncate">{session.name}</div>
-                  )}
-                  <div className="text-sm opacity-50">{session.puzzleType}</div>
-                </div>
-              </div>
+      {/* Stats bar */}
+      {activeSession && activeSession.solves.length > 0 && (
+        <SessionStats solves={activeSession.solves} />
+      )}
 
-              <div className="flex gap-1 mt-1" onClick={(e) => e.stopPropagation()}>
-                <button
-                  onClick={() => handleRename(session.id, session.name)}
-                  className="text-[10px] px-1.5 py-0.5 rounded bg-[var(--surface-3)] hover:bg-[var(--surface-2)] transition-colors"
-                >
-                  rename
-                </button>
-                <button
-                  onClick={() => deleteSession(session.id)}
-                  className="text-[10px] px-1.5 py-0.5 rounded bg-red-500/20 hover:bg-red-500/30 transition-colors"
-                >
-                  delete
-                </button>
-              </div>
-
-              {isActive && (
-                <SolveList
-                  sessionId={session.id}
-                  solves={session.solves}
-                  onDeleteSolve={(solveId) => deleteSolve(session.id, solveId)}
-                  onUpdateSolve={(solveId, patch) => updateSolve(session.id, solveId, patch)}
-                />
-              )}
-            </li>
-          );
-        })}
-      </ul>
+      {/* Solve list */}
+      <div className="flex-1 overflow-y-auto px-3 py-2">
+        {activeSession ? (
+          <SolveList
+            solves={activeSession.solves}
+            onDeleteSolve={(solveId) => deleteSolve(activeSession.id, solveId)}
+            onUpdateSolve={(solveId, patch) => updateSolve(activeSession.id, solveId, patch)}
+            onUndoDelete={handleUndoDelete}
+          />
+        ) : (
+          <div className="text-sm opacity-40 text-center py-8">No session selected</div>
+        )}
+      </div>
 
       {showPicker && (
         <NewSessionPicker
@@ -215,6 +265,8 @@ export function SessionSidebar() {
           onClose={() => setShowPicker(false)}
         />
       )}
+
+      {toast && <Toast message={toast} onClose={() => setToast(null)} />}
     </div>
   );
 
