@@ -14,78 +14,78 @@ All colors are CSS custom properties defined in `src/app/globals.css`. There are
 
 ### Core palette (dark theme shown)
 
-| Token | Hex | Usage |
-|---|---|---|
-| `--bg` | `#0B0E11` | Page background |
-| `--surface` | `#141920` | Card/panel background |
-| `--surface-2` | `#1B2128` | Inner containers, code blocks |
-| `--surface-3` | `#232B35` | Hover states, subtle fills |
-| `--border` | `#2C3540` | Card borders, dividers |
-| `--text` | `#E8E6E1` | Primary text |
-| `--text-dim` | `#7D8590` | Secondary text, labels |
-| `--text-faint` | `#4E5760` | Tertiary text, captions |
-| `--track` | `#1E2530` | Progress bar backgrounds, gauge track |
+| Token          | Hex       | Usage                                 |
+| -------------- | --------- | ------------------------------------- |
+| `--bg`         | `#0B0E11` | Page background                       |
+| `--surface`    | `#141920` | Card/panel background                 |
+| `--surface-2`  | `#1B2128` | Inner containers, code blocks         |
+| `--surface-3`  | `#232B35` | Hover states, subtle fills            |
+| `--border`     | `#2C3540` | Card borders, dividers                |
+| `--text`       | `#E8E6E1` | Primary text                          |
+| `--text-dim`   | `#7D8590` | Secondary text, labels                |
+| `--text-faint` | `#4E5760` | Tertiary text, captions               |
+| `--track`      | `#1E2530` | Progress bar backgrounds, gauge track |
 
 ### Accent colors
 
-| Token | Hex | Usage |
-|---|---|---|
-| `--amber` | `#E5A126` | Primary accent — buttons, links, active states, frequency axis |
-| `--amber-dim` | `#B8801F` | Hover state for amber elements |
-| `--green` | `#2DA44E` | Positive signals — PB badges, "good" tier |
-| `--red` | `#CF4B4B` | Alerts — DNFs, "horrible" tier, projection line |
+| Token         | Hex       | Usage                                                          |
+| ------------- | --------- | -------------------------------------------------------------- |
+| `--amber`     | `#E5A126` | Primary accent — buttons, links, active states, frequency axis |
+| `--amber-dim` | `#B8801F` | Hover state for amber elements                                 |
+| `--green`     | `#2DA44E` | Positive signals — PB badges, "good" tier                      |
+| `--red`       | `#CF4B4B` | Alerts — DNFs, "horrible" tier, projection line                |
 
 ### Cube sticker colors
 
 Used in chart series, the sticker theme, and the 3x3 hero grid. These represent the actual physical cube.
 
-| Token | Hex | Face |
-|---|---|---|
-| `--cube-red` | `#ea3323` | Red |
+| Token           | Hex       | Face   |
+| --------------- | --------- | ------ |
+| `--cube-red`    | `#ea3323` | Red    |
 | `--cube-orange` | `#ff5800` | Orange |
 | `--cube-yellow` | `#ffd500` | Yellow |
-| `--cube-green` | `#00a651` | Green |
-| `--cube-blue` | `#0057c8` | Blue |
-| `--cube-white` | `#f8fafc` | White |
+| `--cube-green`  | `#00a651` | Green  |
+| `--cube-blue`   | `#0057c8` | Blue   |
+| `--cube-white`  | `#f8fafc` | White  |
 
 ### Stat chip colors
 
 Each stat chip in the quick-stats row gets a color via `--chip1` through `--chip6` with matching `--ink1` through `--ink6` for text on colored backgrounds.
 
-| Token pair | Dark value | Purpose |
-|---|---|---|
+| Token pair           | Dark value            | Purpose                         |
+| -------------------- | --------------------- | ------------------------------- |
 | `--chip1` / `--ink1` | `#E5A126` / `#0B0E11` | Solves in range (amber on dark) |
-| `--chip2` / `--ink2` | `#38bdf8` / `#0B0E11` | DNFs (sky blue on dark) |
-| `--chip3` / `--ink3` | `#2DA44E` / `#fff` | Abandoned (green on white) |
-| `--chip4` / `--ink4` | `#CF4B4B` / `#fff` | Current level (red on white) |
-| `--chip5` / `--ink5` | `#818cf8` / `#fff` | Best single (indigo on white) |
-| `--chip6` / `--ink6` | `#E8E6E1` / `#0B0E11` | Active days (white on dark) |
+| `--chip2` / `--ink2` | `#38bdf8` / `#0B0E11` | DNFs (sky blue on dark)         |
+| `--chip3` / `--ink3` | `#2DA44E` / `#fff`    | Abandoned (green on white)      |
+| `--chip4` / `--ink4` | `#CF4B4B` / `#fff`    | Current level (red on white)    |
+| `--chip5` / `--ink5` | `#818cf8` / `#fff`    | Best single (indigo on white)   |
+| `--chip6` / `--ink6` | `#E8E6E1` / `#0B0E11` | Active days (white on dark)     |
 
 ### Chart series colors
 
-| Token | Hex | Series |
-|---|---|---|
-| `--series-raw` | `#9CA3AF` | Session scatter dots |
-| `--series-ao5` | `#38bdf8` | Rolling ao5 line |
-| `--series-ao12` | `#818cf8` | Rolling ao12 line |
-| `--series-ao100` | `#34d399` | Rolling ao100 line |
-| `--series-trend` | `#E5A126` | Fitted trend line (amber) |
-| `--series-proj` | `#CF4B4B` | Projection dashed line (red) |
-| `--chart-bg` | `#141920` | Chart plot area background |
-| `--chart-grid` | `#1E2530` | Grid lines |
-| `--chart-tick` | `#7D8590` | Axis labels |
-| `--chart-volume` | `#232B35` | Volume bar fill |
-| `--chart-tooltip-bg` | `#1B2128` | Tooltip background |
+| Token                | Hex       | Series                       |
+| -------------------- | --------- | ---------------------------- |
+| `--series-raw`       | `#9CA3AF` | Session scatter dots         |
+| `--series-ao5`       | `#38bdf8` | Rolling ao5 line             |
+| `--series-ao12`      | `#818cf8` | Rolling ao12 line            |
+| `--series-ao100`     | `#34d399` | Rolling ao100 line           |
+| `--series-trend`     | `#E5A126` | Fitted trend line (amber)    |
+| `--series-proj`      | `#CF4B4B` | Projection dashed line (red) |
+| `--chart-bg`         | `#141920` | Chart plot area background   |
+| `--chart-grid`       | `#1E2530` | Grid lines                   |
+| `--chart-tick`       | `#7D8590` | Axis labels                  |
+| `--chart-volume`     | `#232B35` | Volume bar fill              |
+| `--chart-tooltip-bg` | `#1B2128` | Tooltip background           |
 
 ### Axis semantic colors
 
 Used in prescription cards and sub-score bars via CSS classes:
 
-| Class | `--axis` | `--axis-text` | Meaning |
-|---|---|---|---|
-| `.axis-improvement` | `var(--cube-red)` | `#ff6b62` | Improvement metric |
-| `.axis-consistency` | `var(--cube-blue)` | `#5b9bff` | Consistency metric |
-| `.axis-frequency` | `var(--amber)` | `var(--amber)` | Frequency metric |
+| Class               | `--axis`           | `--axis-text`  | Meaning            |
+| ------------------- | ------------------ | -------------- | ------------------ |
+| `.axis-improvement` | `var(--cube-red)`  | `#ff6b62`      | Improvement metric |
+| `.axis-consistency` | `var(--cube-blue)` | `#5b9bff`      | Consistency metric |
+| `.axis-frequency`   | `var(--amber)`     | `var(--amber)` | Frequency metric   |
 
 ### Light theme overrides
 
@@ -108,9 +108,9 @@ Two font families loaded via Google Fonts in `globals.css`:
 
 ### Font families
 
-| Variable | Font | Fallback | Usage |
-|---|---|---|---|
-| `--font-sans` | DM Sans | system-ui, sans-serif | Body text, headings, labels |
+| Variable      | Font           | Fallback                | Usage                             |
+| ------------- | -------------- | ----------------------- | --------------------------------- |
+| `--font-sans` |                | system-ui, sans-serif   | Body text, headings, labels       |
 | `--font-mono` | JetBrains Mono | ui-monospace, monospace | Score displays, time values, data |
 
 ### Usage rules
@@ -120,21 +120,21 @@ Two font families loaded via Google Fonts in `globals.css`:
 
 ### Type scale (approximate)
 
-| Element | Size | Weight | Font |
-|---|---|---|---|
-| Page title (upload) | `text-4xl` / `text-5xl` | 700 | DM Sans |
-| Page title (dashboard) | `text-xl` | 700 | DM Sans |
-| Scoreboard score | 48px (SVG) | 700 | JetBrains Mono |
-| Section headings | `text-sm` | 600 uppercase | DM Sans |
-| Card body text | `text-xs` / `text-sm` | 400 | DM Sans |
-| Stat chip label | `text-[10px]` | 400 uppercase | DM Sans |
-| Stat chip value | `text-base` | 400 | JetBrains Mono |
-| Filter labels | `text-[11px]` | 400 | DM Sans |
-| Tier pill | `text-[0.7rem]` | 700 uppercase | DM Sans |
-| Timer display | `text-9xl` | 700 | JetBrains Mono |
-| Scramble text | `text-[36px]` | 500 | DM Sans |
-| Timer phase label | `text-xl` | 400 | DM Sans |
-| Timer info | `text-base` | 400 | DM Sans |
+| Element                | Size                    | Weight        | Font           |
+| ---------------------- | ----------------------- | ------------- | -------------- |
+| Page title (upload)    | `text-4xl` / `text-5xl` | 700           | DM Sans        |
+| Page title (dashboard) | `text-xl`               | 700           | DM Sans        |
+| Scoreboard score       | 48px (SVG)              | 700           | JetBrains Mono |
+| Section headings       | `text-sm`               | 600 uppercase | DM Sans        |
+| Card body text         | `text-xs` / `text-sm`   | 400           | DM Sans        |
+| Stat chip label        | `text-[10px]`           | 400 uppercase | DM Sans        |
+| Stat chip value        | `text-base`             | 400           | JetBrains Mono |
+| Filter labels          | `text-[11px]`           | 400           | DM Sans        |
+| Tier pill              | `text-[0.7rem]`         | 700 uppercase | DM Sans        |
+| Timer display          | `text-9xl`              | 700           | JetBrains Mono |
+| Scramble text          | `text-[36px]`           | 500           | DM Sans        |
+| Timer phase label      | `text-xl`               | 400           | DM Sans        |
+| Timer info             | `text-base`             | 400           | DM Sans        |
 
 ---
 
@@ -157,14 +157,14 @@ Used everywhere: scoreboard hero, stat chips, prescription cards, chart wrapper,
 Small data cards in the quick-stats grid. Has a 4px left accent bar via `::before` pseudo-element. Color set via inline style `--chip` and `--chip-ink`.
 
 ```jsx
-<div className="stat-chip p-2.5 pl-3.5"
-  style={{ "--chip": "var(--chip1)", "--chip-ink": "var(--ink1)" }}>
+<div
+  className="stat-chip p-2.5 pl-3.5"
+  style={{ "--chip": "var(--chip1)", "--chip-ink": "var(--ink1)" }}
+>
   <div className="chip-label text-[10px] uppercase tracking-wide text-[var(--text-faint)]">
     Label
   </div>
-  <div className="mt-0.5 font-mono text-base text-[var(--text)]">
-    Value
-  </div>
+  <div className="mt-0.5 font-mono text-base text-[var(--text)]">Value</div>
 </div>
 ```
 
@@ -174,12 +174,12 @@ In sticker theme, chips become fully colored (background = `--chip`, text = `--c
 
 Colored badge showing the verdict等级. Modifier classes: `.tier-pill-good`, `.tier-pill-decent`, `.tier-pill-bad`, `.tier-pill-horrible`.
 
-| Class | Background | Text |
-|---|---|---|
-| `.tier-pill-good` | `var(--green)` | white |
-| `.tier-pill-decent` | `var(--amber)` | `#0B0E11` (dark) |
-| `.tier-pill-bad` | `var(--cube-orange)` | white |
-| `.tier-pill-horrible` | `var(--red)` | white |
+| Class                 | Background           | Text             |
+| --------------------- | -------------------- | ---------------- |
+| `.tier-pill-good`     | `var(--green)`       | white            |
+| `.tier-pill-decent`   | `var(--amber)`       | `#0B0E11` (dark) |
+| `.tier-pill-bad`      | `var(--cube-orange)` | white            |
+| `.tier-pill-horrible` | `var(--red)`         | white            |
 
 ### Score hero (`.score-hero`)
 
@@ -216,6 +216,7 @@ Progress bar for each scoring axis. Consists of:
 3. Fill: colored by axis, animated width transition (0.6s)
 
 Colors per axis:
+
 - Improvement: `var(--cube-red)`
 - Consistency: `var(--cube-blue)`
 - Frequency: `var(--amber)`
@@ -230,7 +231,9 @@ Individual cube face in the 3x3 upload grid. Inset shadows create a 3D tile effe
 
 ```css
 border-radius: 0.4rem;
-box-shadow: inset 0 -3px 0 rgba(0,0,0,0.25), inset 0 2px 0 rgba(255,255,255,0.22);
+box-shadow:
+  inset 0 -3px 0 rgba(0, 0, 0, 0.25),
+  inset 0 2px 0 rgba(255, 255, 255, 0.22);
 ```
 
 ### Timer page
@@ -253,6 +256,7 @@ Desktop: fixed `w-64` panel on the left, `bg-[var(--surface)]`, `border-r border
 Mobile: slide-in overlay from left (`fixed inset-y-0 left-0`), toggled by hamburger.
 
 Structure (top to bottom):
+
 1. **Dropdown button**: shows active session name · puzzle type · solve count
 2. **Dropdown menu**: all sessions sorted newest-first, each showing name + puzzle + count
 3. **Stats bar**: 2-column grid — best, ao5, best ao5, ao12, best ao12
@@ -292,20 +296,20 @@ Settings page (/settings):
 
 Uses Tailwind defaults:
 
-| Prefix | Width | Usage |
-|---|---|---|
-| (none) | < 640px | Mobile — single column, stacked layout |
-| `sm:` | 640px+ | Small desktop — slightly larger tiles/padding |
-| `lg:` | 1024px+ | Large desktop — 2-column prescription grid, 6-column stat chips |
+| Prefix | Width   | Usage                                                           |
+| ------ | ------- | --------------------------------------------------------------- |
+| (none) | < 640px | Mobile — single column, stacked layout                          |
+| `sm:`  | 640px+  | Small desktop — slightly larger tiles/padding                   |
+| `lg:`  | 1024px+ | Large desktop — 2-column prescription grid, 6-column stat chips |
 
 ### Key layout classes
 
-| Element | Mobile | Desktop |
-|---|---|---|
-| Score hero | Column (stacked) | Row (gauge left, bars right) |
-| Prescription cards | Single column | 2-column grid (`lg:grid-cols-2`) |
-| Quick stats | 2-column grid | 6-column grid (`lg:grid-cols-6`) |
-| Filter bar | Wrapping flex | Single row |
+| Element            | Mobile           | Desktop                          |
+| ------------------ | ---------------- | -------------------------------- |
+| Score hero         | Column (stacked) | Row (gauge left, bars right)     |
+| Prescription cards | Single column    | 2-column grid (`lg:grid-cols-2`) |
+| Quick stats        | 2-column grid    | 6-column grid (`lg:grid-cols-6`) |
+| Filter bar         | Wrapping flex    | Single row                       |
 
 ### Spacing
 
@@ -349,15 +353,15 @@ If you add new chart series, add corresponding `--series-*` tokens in all three 
 
 ### Current animations
 
-| Element | Property | Duration | Easing | Reduced motion |
-|---|---|---|---|---|
-| Gauge ring fill | `stroke-dashoffset` | 0.8s | `cubic-bezier(0.22, 1, 0.36, 1)` | Respected |
-| Score bar fill | `width` | 0.6s | `cubic-bezier(0.22, 1, 0.36, 1)` | Respected |
-| Hero tile hover | `transform` | 0.35s | `cubic-bezier(0.34, 1.56, 0.64, 1)` | Respected |
-| Body background | `background-color` | 0.2s | `ease` | Not explicitly disabled |
-| Sidebar collapse | `width` | 0.3s | `ease` | Not explicitly disabled |
-| Mobile sidebar | `transform` | 0.2s | `ease` | Not explicitly disabled |
-| Timer color | `color` | 0.15s | `ease` | Not explicitly disabled |
+| Element          | Property            | Duration | Easing                              | Reduced motion          |
+| ---------------- | ------------------- | -------- | ----------------------------------- | ----------------------- |
+| Gauge ring fill  | `stroke-dashoffset` | 0.8s     | `cubic-bezier(0.22, 1, 0.36, 1)`    | Respected               |
+| Score bar fill   | `width`             | 0.6s     | `cubic-bezier(0.22, 1, 0.36, 1)`    | Respected               |
+| Hero tile hover  | `transform`         | 0.35s    | `cubic-bezier(0.34, 1.56, 0.64, 1)` | Respected               |
+| Body background  | `background-color`  | 0.2s     | `ease`                              | Not explicitly disabled |
+| Sidebar collapse | `width`             | 0.3s     | `ease`                              | Not explicitly disabled |
+| Mobile sidebar   | `transform`         | 0.2s     | `ease`                              | Not explicitly disabled |
+| Timer color      | `color`             | 0.15s    | `ease`                              | Not explicitly disabled |
 
 ### Reduced motion
 
@@ -365,8 +369,12 @@ All animated elements are wrapped in:
 
 ```css
 @media (prefers-reduced-motion: reduce) {
-  .hero-tile { transition: none; }
-  .score-bar-fill { transition: none; }
+  .hero-tile {
+    transition: none;
+  }
+  .score-bar-fill {
+    transition: none;
+  }
 }
 ```
 
@@ -415,20 +423,20 @@ The `.score-hero` layout is the only component using custom CSS for responsive b
 
 ## File reference
 
-| File | What it controls |
-|---|---|
-| `src/app/globals.css` | All color tokens, typography imports, component styles, animations |
-| `src/app/layout.tsx` | HTML structure, no-flash theme script, metadata, providers |
-| `src/app/page.tsx` | Timer page layout — sidebar + timer, auto-collapse logic |
-| `src/lib/theme.ts` | Theme type, localStorage persistence, chart palette reader |
-| `src/lib/use-timer.ts` | Timer phase machine, scramble generation, keyboard/touch handlers |
-| `src/lib/types.ts` | TimerSettings, TimerSession, TimerSolve types |
-| `src/components/TimerPage.tsx` | Timer display, scramble, blind mode, hamburger button |
-| `src/components/TimerPhaseContext.tsx` | Shares timer phase between TimerPage and page layout |
-| `src/components/SessionSidebar.tsx` | Dropdown picker, stats bar, solve list, session management |
-| `src/components/Navbar.tsx` | Top navigation bar, page links, theme toggle |
-| `src/components/MenuContext.tsx` | Mobile sidebar open/close state |
-| `src/components/ThemeProvider.tsx` | Theme context, cycle function, localStorage persistence |
-| `src/components/ScoreboardHero.tsx` | Gauge ring SVG, score display, sub-score bars |
-| `src/components/Dashboard.tsx` | Upload screen, filter bar, chart, prescriptions, sessions |
-| `src/components/Toast.tsx` | Toast notification with optional undo action |
+| File                                   | What it controls                                                   |
+| -------------------------------------- | ------------------------------------------------------------------ |
+| `src/app/globals.css`                  | All color tokens, typography imports, component styles, animations |
+| `src/app/layout.tsx`                   | HTML structure, no-flash theme script, metadata, providers         |
+| `src/app/page.tsx`                     | Timer page layout — sidebar + timer, auto-collapse logic           |
+| `src/lib/theme.ts`                     | Theme type, localStorage persistence, chart palette reader         |
+| `src/lib/use-timer.ts`                 | Timer phase machine, scramble generation, keyboard/touch handlers  |
+| `src/lib/types.ts`                     | TimerSettings, TimerSession, TimerSolve types                      |
+| `src/components/TimerPage.tsx`         | Timer display, scramble, blind mode, hamburger button              |
+| `src/components/TimerPhaseContext.tsx` | Shares timer phase between TimerPage and page layout               |
+| `src/components/SessionSidebar.tsx`    | Dropdown picker, stats bar, solve list, session management         |
+| `src/components/Navbar.tsx`            | Top navigation bar, page links, theme toggle                       |
+| `src/components/MenuContext.tsx`       | Mobile sidebar open/close state                                    |
+| `src/components/ThemeProvider.tsx`     | Theme context, cycle function, localStorage persistence            |
+| `src/components/ScoreboardHero.tsx`    | Gauge ring SVG, score display, sub-score bars                      |
+| `src/components/Dashboard.tsx`         | Upload screen, filter bar, chart, prescriptions, sessions          |
+| `src/components/Toast.tsx`             | Toast notification with optional undo action                       |
