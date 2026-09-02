@@ -85,76 +85,126 @@ function SolveList({
   onUpdateSolve: (solveId: string, patch: Partial<Pick<TimerSolve, "penalty" | "dnf">>) => void;
   onUndoDelete: (solve: TimerSolve) => void;
 }) {
+  const ao5Map = useMemo(() => {
+    const arr = rollingAverage(solves.map(toSolve), 5);
+    const map = new Map<number, number>();
+    for (let i = 0; i < arr.length; i++) {
+      map.set(i + 4, arr[i].ms);
+    }
+    return map;
+  }, [solves]);
+
+  const ao12Map = useMemo(() => {
+    const arr = rollingAverage(solves.map(toSolve), 12);
+    const map = new Map<number, number>();
+    for (let i = 0; i < arr.length; i++) {
+      map.set(i + 11, arr[i].ms);
+    }
+    return map;
+  }, [solves]);
+
+  const bestSolveId = useMemo(() => {
+    const clean = solves.filter((s) => !s.dnf);
+    if (clean.length === 0) return null;
+    const best = clean.reduce((a, b) => (a.timeMs < b.timeMs ? a : b));
+    return best.id;
+  }, [solves]);
+
   if (solves.length === 0) return null;
   const reversed = [...solves].reverse();
   return (
     <div className="space-y-0.5" onClick={(e) => e.stopPropagation()}>
-      {reversed.map((solve, i) => (
-        <div key={solve.id} className="flex items-center gap-1 text-sm">
-          <span className="font-mono opacity-60 text-right whitespace-nowrap">
-            {solve.dnf ? (
-              "DNF"
-            ) : solve.penalty > 0 ? (
-              <span className="inline-flex items-center gap-1">
-                <span className="line-through opacity-50">{formatTimerTime(solve.timeMs)}</span>
-                <span className="text-amber-400">{formatTimerTime(solve.timeMs + 2000)}</span>
-              </span>
-            ) : (
-              formatTimerTime(solve.timeMs)
-            )}
-          </span>
-          <span className="opacity-30">#{solves.length - i}</span>
-          <div className="ml-auto flex gap-0.5">
-            <button
-              onClick={() => onUpdateSolve(solve.id, { penalty: solve.penalty === 1 ? 0 : 1 })}
-              className={`px-1 py-0.5 rounded transition-colors ${
-                solve.penalty > 0 ? "bg-amber-500/30 text-amber-400" : "bg-[var(--surface-3)] hover:bg-[var(--surface-2)]"
-              }`}
-              title="+2 penalty"
-            >
-              +2
-            </button>
-            <button
-              onClick={() => onUpdateSolve(solve.id, { dnf: !solve.dnf })}
-              className={`px-1 py-0.5 rounded transition-colors ${
-                solve.dnf ? "bg-red-500/30 text-red-400" : "bg-[var(--surface-3)] hover:bg-[var(--surface-2)]"
-              }`}
-              title="DNF"
-            >
-              DNF
-            </button>
-            <button
-              onClick={() => {
-                onDeleteSolve(solve.id);
-                onUndoDelete(solve);
-              }}
-              className="px-1 py-0.5 rounded bg-[var(--surface-3)] hover:bg-red-500/20 hover:text-red-400 transition-colors"
-              title="Delete solve"
-            >
-              x
-            </button>
+      {reversed.map((solve, i) => {
+        const origIdx = solves.length - 1 - i;
+        const ao5 = ao5Map.get(origIdx) ?? null;
+        const ao12 = ao12Map.get(origIdx) ?? null;
+        const isBest = solve.id === bestSolveId;
+        return (
+          <div
+            key={solve.id}
+            className={`flex items-center gap-1 text-sm rounded px-1 -mx-1 ${
+              isBest ? "bg-green-500/10" : ""
+            }`}
+          >
+            <span className={`font-mono whitespace-nowrap ${isBest ? "text-green-400" : "opacity-60"}`}>
+              {solve.dnf ? (
+                "DNF"
+              ) : solve.penalty > 0 ? (
+                <span className="inline-flex items-center gap-1">
+                  <span className="line-through opacity-50">{formatTimerTime(solve.timeMs)}</span>
+                  <span className="text-amber-400">{formatTimerTime(solve.timeMs + 2000)}</span>
+                </span>
+              ) : (
+                formatTimerTime(solve.timeMs)
+              )}
+            </span>
+            <span className="opacity-30 text-xs">#{solves.length - i}</span>
+            <div className="ml-auto flex items-center gap-1">
+              {ao5 !== null && (
+                <span className="text-xs opacity-40 font-mono" title="ao5">
+                  {formatTimerTime(ao5)}
+                </span>
+              )}
+              {ao12 !== null && (
+                <span className="text-xs opacity-40 font-mono" title="ao12">
+                  {formatTimerTime(ao12)}
+                </span>
+              )}
+              <button
+                onClick={() => onUpdateSolve(solve.id, { penalty: solve.penalty === 1 ? 0 : 1 })}
+                className={`px-1 py-0.5 rounded transition-colors ${
+                  solve.penalty > 0
+                    ? "bg-amber-500/30 text-amber-400"
+                    : "bg-[var(--surface-3)] hover:bg-[var(--surface-2)]"
+                }`}
+                title="+2 penalty"
+              >
+                +2
+              </button>
+              <button
+                onClick={() => onUpdateSolve(solve.id, { dnf: !solve.dnf })}
+                className={`px-1 py-0.5 rounded transition-colors ${
+                  solve.dnf
+                    ? "bg-red-500/30 text-red-400"
+                    : "bg-[var(--surface-3)] hover:bg-[var(--surface-2)]"
+                }`}
+                title="DNF"
+              >
+                DNF
+              </button>
+              <button
+                onClick={() => {
+                  onDeleteSolve(solve.id);
+                  onUndoDelete(solve);
+                }}
+                className="px-1 py-0.5 rounded bg-[var(--surface-3)] hover:bg-red-500/20 hover:text-red-400 transition-colors"
+                title="Delete solve"
+              >
+                x
+              </button>
+            </div>
           </div>
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 }
 
 function SessionStats({ solves }: { solves: TimerSolve[] }) {
   const stats = useMemo(() => computeSessionStats(solves), [solves]);
-  const fmt = (ms: number | null) => (ms !== null ? formatTimerTime(ms) : "—");
+  const fmt = (ms: number | null) => (ms !== null ? formatTimerTime(ms) : "-");
   return (
     <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-sm px-3 py-2 border-b border-[var(--border)]">
       <span className="opacity-50">Best</span>
-      <span className="font-mono text-right">{fmt(stats.best)}</span>
-      <span className="opacity-50">Ao5</span>
-      <span className="font-mono text-right">{fmt(stats.currentAo5)}</span>
+      <span className="font-mono text-right text-green-400">{fmt(stats.best)}</span>
       <span className="opacity-50">Best Ao5</span>
       <span className="font-mono text-right">{fmt(stats.bestAo5)}</span>
-      <span className="opacity-50">Ao12</span>
-      <span className="font-mono text-right">{fmt(stats.currentAo12)}</span>
       <span className="opacity-50">Best Ao12</span>
       <span className="font-mono text-right">{fmt(stats.bestAo12)}</span>
+      <span className="opacity-50">Ao5</span>
+      <span className="font-mono text-right">{fmt(stats.currentAo5)}</span>
+      <span className="opacity-50">Ao12</span>
+      <span className="font-mono text-right">{fmt(stats.currentAo12)}</span>
     </div>
   );
 }
@@ -174,6 +224,7 @@ export function SessionSidebar() {
 
   const [showPicker, setShowPicker] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [toast, setToast] = useState<{ message: string; onUndo?: () => void } | null>(null);
   const { mobileOpen, setMobileOpen } = useMenu();
 
@@ -192,6 +243,16 @@ export function SessionSidebar() {
     });
   };
 
+  const handleDeleteSession = (sessionId: string) => {
+    const session = sessions.find((s) => s.id === sessionId);
+    if (!session) return;
+    deleteSession(sessionId);
+    setConfirmDeleteId(null);
+    setToast({
+      message: `Session "${session.name}" deleted`,
+    });
+  };
+
   const sidebar = (
     <div className="w-64 h-full bg-[var(--surface)] border-r border-[var(--border)] flex flex-col">
       {/* Dropdown button */}
@@ -203,7 +264,7 @@ export function SessionSidebar() {
           >
             <span className="truncate">
               {activeSession
-                ? `${activeSession.name} · ${activeSession.puzzleType}`
+                ? `${activeSession.name} - ${activeSession.puzzleType}`
                 : "No session"}
             </span>
             <svg
@@ -226,23 +287,60 @@ export function SessionSidebar() {
         {/* Dropdown menu */}
         {dropdownOpen && (
           <div className="mt-1 bg-[var(--surface-2)] border border-[var(--border)] rounded-md shadow-lg max-h-48 overflow-y-auto">
-            {[...sessions].sort((a, b) => b.createdAt - a.createdAt).map((session) => (
-              <button
-                key={session.id}
-                onClick={() => {
-                  switchSession(session.id);
-                  setDropdownOpen(false);
-                }}
-                className={`w-full px-3 py-2 text-left text-sm hover:bg-[var(--surface-3)] transition-colors flex items-center justify-between ${
-                  session.id === activeSession?.id ? "bg-primary/10" : ""
-                }`}
-              >
-                <span className="truncate">{session.name}</span>
-                <span className="text-xs opacity-40 ml-2 shrink-0">
-                  {session.puzzleType} · {session.solves.length}
-                </span>
-              </button>
-            ))}
+            {[...sessions]
+              .sort((a, b) => b.createdAt - a.createdAt)
+              .map((session) => (
+                <div
+                  key={session.id}
+                  className={`flex items-center group ${
+                    session.id === activeSession?.id ? "bg-primary/10" : ""
+                  }`}
+                >
+                  <button
+                    onClick={() => {
+                      switchSession(session.id);
+                      setDropdownOpen(false);
+                    }}
+                    className="flex-1 px-3 py-2 text-left text-sm hover:bg-[var(--surface-3)] transition-colors flex items-center justify-between min-w-0"
+                  >
+                    <span className="truncate">{session.name}</span>
+                    <span className="text-xs opacity-40 ml-2 shrink-0">
+                      {session.puzzleType} - {session.solves.length}
+                    </span>
+                  </button>
+                  {confirmDeleteId === session.id ? (
+                    <div className="flex items-center gap-0.5 pr-2 shrink-0">
+                      <button
+                        onClick={() => handleDeleteSession(session.id)}
+                        className="text-xs px-1.5 py-0.5 rounded bg-red-500/20 text-red-400 hover:bg-red-500/30 transition-colors"
+                      >
+                        Del
+                      </button>
+                      <button
+                        onClick={() => setConfirmDeleteId(null)}
+                        className="text-xs px-1.5 py-0.5 rounded hover:bg-[var(--surface-3)] transition-colors opacity-60"
+                      >
+                        No
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => setConfirmDeleteId(session.id)}
+                      className="pr-2 pl-1 py-2 opacity-0 group-hover:opacity-40 hover:!opacity-100 transition-opacity shrink-0"
+                      title="Delete session"
+                    >
+                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                        />
+                      </svg>
+                    </button>
+                  )}
+                </div>
+              ))}
             {sessions.length === 0 && (
               <div className="px-3 py-2 text-sm opacity-40">No sessions</div>
             )}
