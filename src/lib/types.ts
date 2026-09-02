@@ -73,6 +73,7 @@ export interface TimerSettings {
   inspectionEnabled: boolean;
   inspectionDurationSec: number;
   soundEnabled: boolean;
+  hideTimer: boolean;
   scrambleLengths: Record<PuzzleType, number>;
 }
 
@@ -87,6 +88,7 @@ export const DEFAULT_SETTINGS: TimerSettings = {
   inspectionEnabled: false,
   inspectionDurationSec: 15,
   soundEnabled: false,
+  hideTimer: false,
   scrambleLengths: {
     "2x2": 11,
     "3x3": 20,

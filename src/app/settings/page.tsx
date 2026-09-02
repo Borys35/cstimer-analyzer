@@ -109,6 +109,24 @@ export default function SettingsPage() {
               {settings.soundEnabled ? "On" : "Off"}
             </button>
           </SettingRow>
+
+          <SettingRow
+            label="Hide timer"
+            description="Show 'Solving...' instead of time during solve"
+          >
+            <button
+              onClick={() =>
+                updateSettings({ hideTimer: !settings.hideTimer })
+              }
+              className={`px-3 py-1 rounded text-sm ${
+                settings.hideTimer
+                  ? "bg-primary/20 text-primary"
+                  : "bg-surface-hover"
+              }`}
+            >
+              {settings.hideTimer ? "On" : "Off"}
+            </button>
+          </SettingRow>
         </div>
       </section>
 
