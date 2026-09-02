@@ -9,9 +9,9 @@ export function Navbar() {
   const { theme } = useTheme();
 
   return (
-    <nav className="flex items-center justify-between px-4 py-2 border-b border-[var(--border)] text-sm bg-[var(--surface)] shrink-0">
+    <nav className="flex items-center justify-between px-4 py-2 border-b border-[var(--border)] text-base bg-[var(--surface)] shrink-0">
       <div className="flex items-center gap-3">
-        <Link href="/" className="hover:opacity-80">
+        <Link href="/">
           {/* Icon only — mobile */}
           <Image
             src="/logo.svg"

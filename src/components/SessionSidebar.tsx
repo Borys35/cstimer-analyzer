@@ -90,7 +90,7 @@ function SolveList({
   return (
     <div className="space-y-0.5" onClick={(e) => e.stopPropagation()}>
       {reversed.map((solve, i) => (
-        <div key={solve.id} className="flex items-center gap-1 text-xs">
+        <div key={solve.id} className="flex items-center gap-1 text-sm">
           <span className="font-mono opacity-60 text-right whitespace-nowrap">
             {solve.dnf ? (
               "DNF"
@@ -144,7 +144,7 @@ function SessionStats({ solves }: { solves: TimerSolve[] }) {
   const stats = useMemo(() => computeSessionStats(solves), [solves]);
   const fmt = (ms: number | null) => (ms !== null ? formatTimerTime(ms) : "—");
   return (
-    <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-xs px-3 py-2 border-b border-[var(--border)]">
+    <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-sm px-3 py-2 border-b border-[var(--border)]">
       <span className="opacity-50">Best</span>
       <span className="font-mono text-right">{fmt(stats.best)}</span>
       <span className="opacity-50">Ao5</span>
