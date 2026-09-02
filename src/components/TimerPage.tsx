@@ -99,7 +99,7 @@ export default function TimerPage() {
         ? "Solving..."
         : phase === "inspection"
           ? "Inspecting..."
-          : "Press any key to start";
+          : "Press spacebar to start";
 
   const [holdMs, setHoldMs] = useState(0);
   useEffect(() => {
@@ -125,7 +125,7 @@ export default function TimerPage() {
       className="flex flex-col items-center justify-center h-full select-none"
       onTouchStart={handleTap}
     >
-      <div className="text-base opacity-60 mb-8 max-w-md text-center whitespace-pre-wrap">
+      <div className="text-lg opacity-60 mb-8 max-w-md text-center whitespace-pre-wrap">
         {scramble}
       </div>
 
