@@ -105,7 +105,7 @@ function SubScoreBar({
       <div className="mb-1.5 flex items-baseline justify-between text-sm">
         <span className="font-medium text-[var(--text)]">{label}</span>
         <span className="font-mono text-xs text-[var(--text-dim)]">
-          {score != null ? score : "\u2014"}/100
+          {score != null ? score : "-"}/100
           <span className="ml-1 text-[var(--text-faint)]">({weight})</span>
         </span>
       </div>

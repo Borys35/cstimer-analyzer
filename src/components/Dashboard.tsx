@@ -169,7 +169,7 @@ function SessionTooltip(props: {
           {isPbMean && <span className="ml-1.5 rounded bg-green-500/20 px-1 py-0.5 text-[10px] font-medium text-green-400">PB</span>}
         </div>
         <div>
-          Best single: <span className="font-mono">{best != null ? fmtTime(best) : "\u2014"}</span>
+          Best single: <span className="font-mono">{best != null ? fmtTime(best) : "-"}</span>
           {isPbSingle && <span className="ml-1.5 rounded bg-green-500/20 px-1 py-0.5 text-[10px] font-medium text-green-400">PB</span>}
         </div>
         {bestAo5 != null && (
@@ -268,7 +268,7 @@ export default function Dashboard() {
             </span>
           </h1>
           <p className="text-xs text-[var(--text-faint)]">
-            {sessions.length} session{sessions.length !== 1 ? "s" : ""} \u00b7 everything analyzed locally in your browser
+            {sessions.length} session{sessions.length !== 1 ? "s" : ""} - everything analyzed locally in your browser
           </p>
         </div>
       </header>
@@ -321,8 +321,8 @@ export default function Dashboard() {
           ["Solves in range", String(d.clean.length)],
           ["DNFs", String(d.dnfInRange)],
           ["Abandoned", String(d.junkCount)],
-          ["Current level", a.currentLevelMs != null ? fmtTime(a.currentLevelMs) : "\u2014"],
-          ["Best single", d.bestSingleMs != null ? fmtTime(d.bestSingleMs) : "\u2014"],
+          ["Current level", a.currentLevelMs != null ? fmtTime(a.currentLevelMs) : "-"],
+          ["Best single", d.bestSingleMs != null ? fmtTime(d.bestSingleMs) : "-"],
           ["Active days", `${a.freq.activeDays}/14 @ ${a.freq.solvesPerActiveDay.toFixed(0)}/d`],
         ].map(([k, v], i) => (
           <div
@@ -331,7 +331,7 @@ export default function Dashboard() {
             style={{ "--chip": `var(--chip${i + 1})`, "--chip-ink": `var(--ink${i + 1})` } as React.CSSProperties}
           >
             <div className="chip-label text-[10px] uppercase tracking-wide text-[var(--text-faint)]">{k}</div>
-            <div className="mt-0.5 font-mono text-base text-[var(--text)]">{v}</div>
+            <div className="mt-0.5 font-mono text-base text-[var(--text)]" style={{color: i == 5 ? "var(--bg)" : ""}}>{v}</div>
           </div>
         ))}
       </section>
@@ -387,7 +387,7 @@ export default function Dashboard() {
             </ResponsiveContainer>
           )}
           <p className="mt-1 text-center text-[11px] text-[var(--text-faint)]">
-            each dot is a session \u2014 bigger = more solves, greener = more consistent
+            each dot is a session - bigger = more solves, greener = more consistent
           </p>
         </div>
       </section>
@@ -408,7 +408,7 @@ export default function Dashboard() {
       {/* Prescriptions */}
       <section className="mb-5 space-y-2">
         <h2 className="text-[11px] font-semibold uppercase tracking-wider text-[var(--text-faint)]">
-          Where you are losing points \u2014 worst first
+          Where you are losing points - worst first
         </h2>
         {d.report.splitHint && (
           <p className="card px-3 py-2 text-xs text-[var(--text-faint)]">{d.report.splitHint}</p>
@@ -477,12 +477,12 @@ export default function Dashboard() {
       {/* Sessions */}
       <details className="card p-3.5 text-sm">
         <summary className="cursor-pointer text-xs text-[var(--text-dim)]">
-          Sessions ({data.sessions.length}) \u2014 fix auto-detected event types here
+          Sessions ({data.sessions.length}) - fix auto-detected event types here
         </summary>
         <div className="mt-3 divide-y divide-[var(--border)]">
           {data.sessions.map((s) => (
             <div key={s.meta.key} className="flex flex-wrap items-center gap-x-3 gap-y-1 py-2">
-              <span className="w-16 font-mono text-[11px] text-[var(--text-faint)]">{s.meta.key}</span>
+              <span className="min-w-16 font-mono text-[11px] text-[var(--text-faint)]">{s.meta.key}</span>
               <span className="min-w-36 flex-1 truncate text-[11px] text-[var(--text-dim)]">
                 {new Intl.DateTimeFormat("en-GB", {
                   day: "2-digit",
@@ -490,7 +490,7 @@ export default function Dashboard() {
                   year: "2-digit",
                   timeZone: "UTC",
                 }).format(s.meta.firstDateSec * 1000)}{" "}
-                \u00b7 {s.meta.solveCount} solves
+                - {s.meta.solveCount} solves
               </span>
               <span className="text-[11px] text-[var(--text-faint)]">{s.typeSource}</span>
               <select

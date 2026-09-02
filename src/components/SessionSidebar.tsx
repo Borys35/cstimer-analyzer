@@ -85,14 +85,10 @@ function computeSessionStats(solves: TimerSolve[]) {
 
 function SolveList({
   solves,
-  onDeleteSolve,
-  onUpdateSolve,
-  onUndoDelete,
+  onSelectSolve,
 }: {
   solves: TimerSolve[];
-  onDeleteSolve: (solveId: string) => void;
-  onUpdateSolve: (solveId: string, patch: Partial<Pick<TimerSolve, "penalty" | "dnf">>) => void;
-  onUndoDelete: (solve: TimerSolve) => void;
+  onSelectSolve: (solve: TimerSolve) => void;
 }) {
   const ao5Map = useMemo(() => {
     const arr = rollingAverage(solves.map(toSolve), 5);
@@ -112,100 +108,158 @@ function SolveList({
     return map;
   }, [solves]);
 
-  const bestSolveId = useMemo(() => {
+  const bestSingleMs = useMemo(() => {
     const clean = solves.filter((s) => !s.dnf);
     if (clean.length === 0) return null;
-    const best = clean.reduce((a, b) => (a.timeMs < b.timeMs ? a : b));
-    return best.id;
+    return Math.min(...clean.map((s) => s.timeMs));
   }, [solves]);
 
-  const currentAo5Start = solves.length >= 5 ? solves.length - 5 : -1;
-  const currentAo12Start = solves.length >= 12 ? solves.length - 12 : -1;
+  const bestAo5Ms = useMemo(() => {
+    const vals = [...ao5Map.values()].filter((v): v is number => v !== null);
+    return vals.length > 0 ? Math.min(...vals) : null;
+  }, [ao5Map]);
+
+  const bestAo12Ms = useMemo(() => {
+    const vals = [...ao12Map.values()].filter((v): v is number => v !== null);
+    return vals.length > 0 ? Math.min(...vals) : null;
+  }, [ao12Map]);
 
   if (solves.length === 0) return null;
   const reversed = [...solves].reverse();
   return (
-    <div className="space-y-0.5" onClick={(e) => e.stopPropagation()}>
-      {reversed.map((solve, i) => {
-        const origIdx = solves.length - 1 - i;
-        const ao5 = ao5Map.get(origIdx) ?? null;
-        const ao12 = ao12Map.get(origIdx) ?? null;
-        const isBest = solve.id === bestSolveId;
-        const inAo5 = origIdx >= currentAo5Start;
-        const inAo12 = origIdx >= currentAo12Start;
-        return (
-          <div
-            key={solve.id}
-            className={`flex items-center gap-1 text-sm rounded px-1 -mx-1 ${
-              isBest
-                ? "bg-green-500/10"
-                : inAo5
-                  ? "bg-blue-500/8"
-                  : inAo12
-                    ? "bg-purple-500/5"
-                    : ""
+    <table className="w-full text-sm" onClick={(e) => e.stopPropagation()}>
+      <thead>
+        <tr className="opacity-40 text-[10px] uppercase">
+          <th className="text-left py-0.5">#</th>
+          <th className="text-right py-0.5">Time</th>
+          <th className="text-right py-0.5">Ao5</th>
+          <th className="text-right py-0.5">Ao12</th>
+        </tr>
+      </thead>
+      <tbody>
+        {reversed.map((solve, i) => {
+          const origIdx = solves.length - 1 - i;
+          const ao5 = ao5Map.get(origIdx) ?? null;
+          const ao12 = ao12Map.get(origIdx) ?? null;
+          const isBestSingle = bestSingleMs !== null && !solve.dnf && solve.timeMs === bestSingleMs;
+          const isBestAo5 = bestAo5Ms !== null && ao5 !== null && ao5 === bestAo5Ms;
+          const isBestAo12 = bestAo12Ms !== null && ao12 !== null && ao12 === bestAo12Ms;
+          return (
+            <tr
+              key={solve.id}
+              className="hover:bg-[var(--surface-3)] cursor-pointer transition-colors"
+              onClick={() => onSelectSolve(solve)}
+            >
+              <td className="py-0.5 opacity-30 text-xs">#{solves.length - i}</td>
+              <td className={`py-0.5 text-right font-mono whitespace-nowrap ${isBestSingle ? "text-green-400" : "opacity-60"}`}>
+                {solve.dnf ? (
+                  "DNF"
+                ) : solve.penalty > 0 ? (
+                  <span className="inline-flex items-center gap-1">
+                    <span className="line-through opacity-50">{formatTimerTime(solve.timeMs)}</span>
+                    <span className="text-amber-400">{formatTimerTime(solve.timeMs + 2000)}</span>
+                  </span>
+                ) : (
+                  formatTimerTime(solve.timeMs)
+                )}
+              </td>
+              <td className={`py-0.5 text-right font-mono text-xs ${isBestAo5 ? "text-blue-400" : "opacity-40"}`}>
+                {ao5 !== null ? formatTimerTime(ao5) : ""}
+              </td>
+              <td className={`py-0.5 text-right font-mono text-xs ${isBestAo12 ? "text-purple-400" : "opacity-40"}`}>
+                {ao12 !== null ? formatTimerTime(ao12) : ""}
+              </td>
+            </tr>
+          );
+        })}
+      </tbody>
+    </table>
+  );
+}
+
+function SolveDetailModal({
+  solve,
+  onClose,
+  onUpdate,
+  onDelete,
+  onUndoDelete,
+}: {
+  solve: TimerSolve;
+  onClose: () => void;
+  onUpdate: (patch: Partial<Pick<TimerSolve, "penalty" | "dnf">>) => void;
+  onDelete: () => void;
+  onUndoDelete: () => void;
+}) {
+  return (
+    <div className="fixed inset-0 flex items-center justify-center z-50" onClick={onClose}>
+      <div
+        className="bg-[var(--surface-2)] border border-[var(--border)] rounded-lg p-5 shadow-2xl w-80"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="text-center mb-4">
+          <div className="text-2xl font-mono font-bold mb-1">
+            {solve.dnf ? (
+              "DNF"
+            ) : solve.penalty > 0 ? (
+              <span className="inline-flex items-center gap-1">
+                <span className="line-through opacity-50">{formatTimerTime(solve.timeMs)}</span>
+                <span className="text-amber-400">{formatTimerTime(solve.timeMs + 2000)}</span>
+              </span>
+            ) : (
+              formatTimerTime(solve.timeMs)
+            )}
+          </div>
+          <div className="text-xs opacity-40">
+            {new Date(solve.dateSec * 1000).toLocaleDateString(undefined, {
+              year: "numeric",
+              month: "short",
+              day: "numeric",
+            })}
+          </div>
+        </div>
+
+        <div className="text-xs opacity-50 mb-4 break-all leading-relaxed font-mono">{solve.scramble}</div>
+
+        <div className="flex gap-2 mb-3">
+          <button
+            onClick={() => onUpdate({ penalty: solve.penalty === 1 ? 0 : 1 })}
+            className={`flex-1 px-3 py-2 rounded text-sm font-medium transition-colors ${
+              solve.penalty > 0
+                ? "bg-amber-500/30 text-amber-400"
+                : "bg-[var(--surface-3)] hover:bg-[var(--surface-2)]"
             }`}
           >
-            <span className={`font-mono whitespace-nowrap ${isBest ? "text-green-400" : "opacity-60"}`}>
-              {solve.dnf ? (
-                "DNF"
-              ) : solve.penalty > 0 ? (
-                <span className="inline-flex items-center gap-1">
-                  <span className="line-through opacity-50">{formatTimerTime(solve.timeMs)}</span>
-                  <span className="text-amber-400">{formatTimerTime(solve.timeMs + 2000)}</span>
-                </span>
-              ) : (
-                formatTimerTime(solve.timeMs)
-              )}
-            </span>
-            <span className="opacity-30 text-xs">#{solves.length - i}</span>
-            <div className="ml-auto flex items-center gap-1">
-              {ao5 !== null && (
-                <span className={`text-xs font-mono ${inAo5 ? "text-blue-400" : "opacity-40"}`} title="ao5">
-                  {formatTimerTime(ao5)}
-                </span>
-              )}
-              {ao12 !== null && (
-                <span className={`text-xs font-mono ${inAo12 && !inAo5 ? "text-purple-400" : inAo5 ? "opacity-40" : "opacity-40"}`} title="ao12">
-                  {formatTimerTime(ao12)}
-                </span>
-              )}
-              <button
-                onClick={() => onUpdateSolve(solve.id, { penalty: solve.penalty === 1 ? 0 : 1 })}
-                className={`px-1 py-0.5 rounded transition-colors ${
-                  solve.penalty > 0
-                    ? "bg-amber-500/30 text-amber-400"
-                    : "bg-[var(--surface-3)] hover:bg-[var(--surface-2)]"
-                }`}
-                title="+2 penalty"
-              >
-                +2
-              </button>
-              <button
-                onClick={() => onUpdateSolve(solve.id, { dnf: !solve.dnf })}
-                className={`px-1 py-0.5 rounded transition-colors ${
-                  solve.dnf
-                    ? "bg-red-500/30 text-red-400"
-                    : "bg-[var(--surface-3)] hover:bg-[var(--surface-2)]"
-                }`}
-                title="DNF"
-              >
-                DNF
-              </button>
-              <button
-                onClick={() => {
-                  onDeleteSolve(solve.id);
-                  onUndoDelete(solve);
-                }}
-                className="px-1 py-0.5 rounded bg-[var(--surface-3)] hover:bg-red-500/20 hover:text-red-400 transition-colors"
-                title="Delete solve"
-              >
-                x
-              </button>
-            </div>
-          </div>
-        );
-      })}
+            +2
+          </button>
+          <button
+            onClick={() => onUpdate({ dnf: !solve.dnf })}
+            className={`flex-1 px-3 py-2 rounded text-sm font-medium transition-colors ${
+              solve.dnf
+                ? "bg-red-500/30 text-red-400"
+                : "bg-[var(--surface-3)] hover:bg-[var(--surface-2)]"
+            }`}
+          >
+            DNF
+          </button>
+        </div>
+
+        <button
+          onClick={() => {
+            onDelete();
+            onUndoDelete();
+            onClose();
+          }}
+          className="w-full px-3 py-2 rounded text-sm bg-[var(--surface-3)] hover:bg-red-500/20 hover:text-red-400 transition-colors mb-2"
+        >
+          Delete
+        </button>
+        <button
+          onClick={onClose}
+          className="w-full px-3 py-2 rounded text-sm opacity-60 hover:opacity-100 transition-opacity"
+        >
+          Close
+        </button>
+      </div>
     </div>
   );
 }
@@ -248,6 +302,7 @@ export function SessionSidebar() {
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [toast, setToast] = useState<{ message: string; onUndo?: () => void } | null>(null);
+  const [selectedSolve, setSelectedSolve] = useState<TimerSolve | null>(null);
   const { mobileOpen, setMobileOpen } = useMenu();
 
   const handleUndoDelete = (solve: TimerSolve) => {
@@ -380,9 +435,7 @@ export function SessionSidebar() {
         {activeSession ? (
           <SolveList
             solves={activeSession.solves}
-            onDeleteSolve={(solveId) => deleteSolve(activeSession.id, solveId)}
-            onUpdateSolve={(solveId, patch) => updateSolve(activeSession.id, solveId, patch)}
-            onUndoDelete={handleUndoDelete}
+            onSelectSolve={setSelectedSolve}
           />
         ) : (
           <div className="text-sm opacity-40 text-center py-8">No session selected</div>
@@ -393,6 +446,16 @@ export function SessionSidebar() {
         <NewSessionPicker
           onSelect={(puzzle) => createSession(puzzle)}
           onClose={() => setShowPicker(false)}
+        />
+      )}
+
+      {selectedSolve && activeSession && (
+        <SolveDetailModal
+          solve={selectedSolve}
+          onClose={() => setSelectedSolve(null)}
+          onUpdate={(patch) => updateSolve(activeSession.id, selectedSolve.id, patch)}
+          onDelete={() => deleteSolve(activeSession.id, selectedSolve.id)}
+          onUndoDelete={() => handleUndoDelete(selectedSolve)}
         />
       )}
 
