@@ -47,23 +47,25 @@ export interface BuildChartRowsInput {
 function computeSessionMean(solves: Solve[]): number | null {
   const clean = solves.filter((s) => !s.dnf);
   if (clean.length === 0) return null;
-  return clean.reduce((a, b) => a + b.timeMs, 0) / clean.length;
+  return clean.reduce((a, b) => a + b.timeMs + (b.penalty > 0 ? 2000 : 0), 0) / clean.length;
 }
 
 function computeSessionStd(solves: Solve[]): number | null {
   const clean = solves.filter((s) => !s.dnf);
   if (clean.length < 2) return null;
-  const mean = clean.reduce((a, b) => a + b.timeMs, 0) / clean.length;
-  const variance = clean.reduce((a, b) => a + (b.timeMs - mean) ** 2, 0) / clean.length;
+  const times = clean.map((s) => s.timeMs + (s.penalty > 0 ? 2000 : 0));
+  const mean = times.reduce((a, b) => a + b, 0) / times.length;
+  const variance = times.reduce((a, b) => a + (b - mean) ** 2, 0) / times.length;
   return Math.sqrt(variance);
 }
 
 function computeSessionCv(solves: Solve[]): number | null {
   const clean = solves.filter((s) => !s.dnf);
   if (clean.length < 2) return null;
-  const mean = clean.reduce((a, b) => a + b.timeMs, 0) / clean.length;
+  const times = clean.map((s) => s.timeMs + (s.penalty > 0 ? 2000 : 0));
+  const mean = times.reduce((a, b) => a + b, 0) / times.length;
   if (mean === 0) return null;
-  const variance = clean.reduce((a, b) => a + (b.timeMs - mean) ** 2, 0) / clean.length;
+  const variance = times.reduce((a, b) => a + (b - mean) ** 2, 0) / times.length;
   return Math.sqrt(variance) / mean;
 }
 
