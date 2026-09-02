@@ -65,6 +65,11 @@ function bestTime(solves: TimerSolve[]): number | null {
 
 function computeSessionStats(solves: TimerSolve[]) {
   const best = bestTime(solves);
+  const clean = solves.filter((s) => !s.dnf);
+  const mean =
+    clean.length > 0
+      ? clean.reduce((a, s) => a + s.timeMs + (s.penalty > 0 ? 2000 : 0), 0) / clean.length
+      : null;
   const ao5Arr = rollingAverage(solves.map(toSolve), 5);
   const ao12Arr = rollingAverage(solves.map(toSolve), 12);
   const lastAo5Ms = ao5Arr.length > 0 ? ao5Arr[ao5Arr.length - 1].ms : null;
@@ -75,7 +80,7 @@ function computeSessionStats(solves: TimerSolve[]) {
   const currentAo12 = lastAo12Ms !== null && isFinite(lastAo12Ms) ? lastAo12Ms : null;
   const ao12Valid = ao12Arr.filter((a) => isFinite(a.ms));
   const bestAo12 = ao12Valid.length > 0 ? Math.min(...ao12Valid.map((a) => a.ms)) : null;
-  return { best, currentAo5, bestAo5, currentAo12, bestAo12 };
+  return { best, mean, currentAo5, bestAo5, currentAo12, bestAo12 };
 }
 
 function SolveList({
@@ -212,6 +217,8 @@ function SessionStats({ solves }: { solves: TimerSolve[] }) {
     <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-sm px-3 py-2 border-b border-[var(--border)]">
       <span className="opacity-50">Best</span>
       <span className="font-mono text-right text-green-400">{fmt(stats.best)}</span>
+      <span className="opacity-50">Mean</span>
+      <span className="font-mono text-right">{fmt(stats.mean)}</span>
       <span className="opacity-50">Best Ao5</span>
       <span className="font-mono text-right">{fmt(stats.bestAo5)}</span>
       <span className="opacity-50">Best Ao12</span>
