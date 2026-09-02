@@ -226,7 +226,7 @@ export function SessionSidebar() {
         {/* Dropdown menu */}
         {dropdownOpen && (
           <div className="mt-1 bg-[var(--surface-2)] border border-[var(--border)] rounded-md shadow-lg max-h-48 overflow-y-auto">
-            {sessions.map((session) => (
+            {[...sessions].sort((a, b) => b.createdAt - a.createdAt).map((session) => (
               <button
                 key={session.id}
                 onClick={() => {
