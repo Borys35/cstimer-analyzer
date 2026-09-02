@@ -5,9 +5,11 @@ import { useSession } from "@/components/SessionProvider";
 import { useTimer } from "@/lib/use-timer";
 import { formatTimerTime } from "@/lib/timer-utils";
 import { playStartBeep, playStopBeep } from "@/lib/sound";
+import { useMenu } from "@/components/MenuContext";
 
 export default function TimerPage() {
   const { activeSession, settings, addSolve } = useSession();
+  const { mobileOpen, setMobileOpen } = useMenu();
 
   const puzzleType = activeSession?.puzzleType ?? "3x3";
   const scrambleLength =
@@ -122,24 +124,35 @@ export default function TimerPage() {
 
   return (
     <div
-      className="flex flex-col items-center justify-center h-full select-none"
-      onTouchStart={handleTap}
+      className="flex flex-col items-center justify-center h-full select-none relative"
+      onTouchStart={handleKeyDown}
+      onTouchEnd={handleKeyUp}
     >
-      <div className="text-lg opacity-60 mb-8 max-w-md text-center whitespace-pre-wrap">
+      <button
+        className="absolute top-3 left-3 z-40 md:hidden p-2 rounded bg-[var(--surface-3)] hover:bg-[var(--surface-2)] transition-colors"
+        onClick={() => setMobileOpen(!mobileOpen)}
+        aria-label="Toggle sessions"
+      >
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+        </svg>
+      </button>
+
+      <div className="text-[36px] opacity-60 mb-8 max-w-lg text-center whitespace-pre-wrap leading-snug">
         {scramble}
       </div>
 
       <div
-        className="text-8xl font-mono font-bold tracking-tight cursor-pointer transition-colors"
+        className="text-9xl font-mono font-bold tracking-tight cursor-pointer transition-colors"
         style={{ color: timerColor }}
         data-testid="timer-display"
       >
         {formatTimerTime(displayTime)}
       </div>
 
-      <div className="text-base opacity-40 mt-4">{phaseLabel}</div>
+      <div className="text-xl opacity-40 mt-4">{phaseLabel}</div>
 
-      <div className="mt-8 text-sm opacity-30">
+      <div className="mt-8 text-base opacity-30">
         {puzzleType} &middot; {activeSession?.name ?? "No session"}
       </div>
     </div>
