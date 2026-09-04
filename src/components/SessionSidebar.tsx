@@ -273,7 +273,7 @@ function SessionStats({ solves }: { solves: TimerSolve[] }) {
   const fmtPct = (v: number | null) => (v !== null ? `${(v * 100).toFixed(1)}%` : "-");
   const fmtSec = (ms: number | null) => (ms !== null ? `${(ms / 1000).toFixed(2)}s` : "-");
   return (
-    <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-sm px-3 py-2 border-b border-[var(--border)]">
+    <div className="w-full grid grid-cols-2 gap-x-3 gap-y-1 text-sm px-3 py-2 border-b border-[var(--border)]">
       <span className="opacity-50">Best</span>
       <span className="font-mono text-right text-green-400">{fmt(stats.best)}</span>
       <span className="opacity-50">Mean</span>
@@ -480,7 +480,9 @@ export function SessionSidebar() {
 
       {/* Stats bar */}
       {activeSession && activeSession.solves.length > 0 && (
-        <SessionStats solves={activeSession.solves} />
+        <div className="shrink-0">
+          <SessionStats solves={activeSession.solves} />
+        </div>
       )}
 
       {/* Solve list */}
