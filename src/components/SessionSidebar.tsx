@@ -273,7 +273,7 @@ function SessionStats({ solves }: { solves: TimerSolve[] }) {
   const fmtPct = (v: number | null) => (v !== null ? `${(v * 100).toFixed(1)}%` : "-");
   const fmtSec = (ms: number | null) => (ms !== null ? `${(ms / 1000).toFixed(2)}s` : "-");
   return (
-    <div className="flex flex-wrap justify-center gap-x-4 gap-y-2 px-3 py-3 border-b border-[var(--border)]">
+    <div className="grid grid-cols-2 gap-x-4 gap-y-2 px-3 py-3 border-b border-[var(--border)]">
       <div className="flex flex-col gap-0.5">
         <span className="opacity-50 text-center text-xs">Best</span>
         <span className="font-mono text-base text-center text-green-400">{fmt(stats.best)}</span>
