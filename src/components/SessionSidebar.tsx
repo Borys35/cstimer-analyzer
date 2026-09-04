@@ -273,23 +273,39 @@ function SessionStats({ solves }: { solves: TimerSolve[] }) {
   const fmtPct = (v: number | null) => (v !== null ? `${(v * 100).toFixed(1)}%` : "-");
   const fmtSec = (ms: number | null) => (ms !== null ? `${(ms / 1000).toFixed(2)}s` : "-");
   return (
-    <div className="w-full grid grid-cols-2 gap-x-3 gap-y-1 text-sm px-3 py-2 border-b border-[var(--border)]">
-      <span className="opacity-50">Best</span>
-      <span className="font-mono text-right text-green-400">{fmt(stats.best)}</span>
-      <span className="opacity-50">Mean</span>
-      <span className="font-mono text-right">{fmt(stats.mean)}</span>
-      <span className="opacity-50">Std Dev</span>
-      <span className="font-mono text-right">{fmtSec(stats.stdDev)}</span>
-      <span className="opacity-50">CV</span>
-      <span className="font-mono text-right">{fmtPct(stats.cv)}</span>
-      <span className="opacity-50">Best Ao5</span>
-      <span className="font-mono text-right">{fmt(stats.bestAo5)}</span>
-      <span className="opacity-50">Best Ao12</span>
-      <span className="font-mono text-right">{fmt(stats.bestAo12)}</span>
-      <span className="opacity-50">Ao5</span>
-      <span className="font-mono text-right">{fmt(stats.currentAo5)}</span>
-      <span className="opacity-50">Ao12</span>
-      <span className="font-mono text-right">{fmt(stats.currentAo12)}</span>
+    <div className="flex flex-wrap justify-center gap-x-4 gap-y-2 px-3 py-3 border-b border-[var(--border)]">
+      <div className="flex flex-col gap-0.5">
+        <span className="opacity-50 text-center text-xs">Best</span>
+        <span className="font-mono text-base text-center text-green-400">{fmt(stats.best)}</span>
+      </div>
+      <div className="flex flex-col gap-0.5">
+        <span className="opacity-50 text-center text-xs">Mean</span>
+        <span className="font-mono text-base text-center">{fmt(stats.mean)}</span>
+      </div>
+      <div className="flex flex-col gap-0.5">
+        <span className="opacity-50 text-center text-xs">Std Dev</span>
+        <span className="font-mono text-base text-center">{fmtSec(stats.stdDev)}</span>
+      </div>
+      <div className="flex flex-col gap-0.5">
+        <span className="opacity-50 text-center text-xs">CV</span>
+        <span className="font-mono text-base text-center">{fmtPct(stats.cv)}</span>
+      </div>
+      <div className="flex flex-col gap-0.5">
+        <span className="opacity-50 text-center text-xs">Best Ao5</span>
+        <span className="font-mono text-base text-center text-blue-400">{fmt(stats.bestAo5)}</span>
+      </div>
+      <div className="flex flex-col gap-0.5">
+        <span className="opacity-50 text-center text-xs">Best Ao12</span>
+        <span className="font-mono text-base text-center text-purple-400">{fmt(stats.bestAo12)}</span>
+      </div>
+      <div className="flex flex-col gap-0.5">
+        <span className="opacity-50 text-center text-xs">Ao5</span>
+        <span className="font-mono text-base text-center">{fmt(stats.currentAo5)}</span>
+      </div>
+      <div className="flex flex-col gap-0.5">
+        <span className="opacity-50 text-center text-xs">Ao12</span>
+        <span className="font-mono text-base text-center">{fmt(stats.currentAo12)}</span>
+      </div>
     </div>
   );
 }
