@@ -5,7 +5,7 @@ import type { PuzzleType, TimerSolve } from "@/lib/types";
 import { useSession } from "@/components/SessionProvider";
 import { useMenu } from "@/components/MenuContext";
 import { formatTimerTime } from "@/lib/timer-utils";
-import { rollingAverage } from "@/lib/stats";
+import { rollingAverage, coefficientOfVariation } from "@/lib/stats";
 import { Toast } from "@/components/Toast";
 
 const PUZZLE_OPTIONS: PuzzleType[] = ["3x3", "2x2", "Pyraminx", "Square-1"];
@@ -66,10 +66,13 @@ function bestTime(solves: TimerSolve[]): number | null {
 function computeSessionStats(solves: TimerSolve[]) {
   const best = bestTime(solves);
   const clean = solves.filter((s) => !s.dnf);
-  const mean =
-    clean.length > 0
-      ? clean.reduce((a, s) => a + s.timeMs + (s.penalty > 0 ? 2000 : 0), 0) / clean.length
+  const times = clean.map((s) => s.timeMs + (s.penalty > 0 ? 2000 : 0));
+  const mean = times.length > 0 ? times.reduce((a, b) => a + b, 0) / times.length : null;
+  const stdDev =
+    times.length >= 2
+      ? Math.sqrt(times.reduce((a, t) => a + (t - mean!) ** 2, 0) / times.length)
       : null;
+  const cv = times.length >= 2 ? coefficientOfVariation(times) : null;
   const ao5Arr = rollingAverage(solves.map(toSolve), 5);
   const ao12Arr = rollingAverage(solves.map(toSolve), 12);
   const lastAo5Ms = ao5Arr.length > 0 ? ao5Arr[ao5Arr.length - 1].ms : null;
@@ -80,7 +83,7 @@ function computeSessionStats(solves: TimerSolve[]) {
   const currentAo12 = lastAo12Ms !== null && isFinite(lastAo12Ms) ? lastAo12Ms : null;
   const ao12Valid = ao12Arr.filter((a) => isFinite(a.ms));
   const bestAo12 = ao12Valid.length > 0 ? Math.min(...ao12Valid.map((a) => a.ms)) : null;
-  return { best, mean, currentAo5, bestAo5, currentAo12, bestAo12 };
+  return { best, mean, stdDev, cv, currentAo5, bestAo5, currentAo12, bestAo12 };
 }
 
 function SolveList({
@@ -267,12 +270,18 @@ function SolveDetailModal({
 function SessionStats({ solves }: { solves: TimerSolve[] }) {
   const stats = useMemo(() => computeSessionStats(solves), [solves]);
   const fmt = (ms: number | null) => (ms !== null ? formatTimerTime(ms) : "-");
+  const fmtPct = (v: number | null) => (v !== null ? `${(v * 100).toFixed(1)}%` : "-");
+  const fmtSec = (ms: number | null) => (ms !== null ? `${(ms / 1000).toFixed(2)}s` : "-");
   return (
     <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-sm px-3 py-2 border-b border-[var(--border)]">
       <span className="opacity-50">Best</span>
       <span className="font-mono text-right text-green-400">{fmt(stats.best)}</span>
       <span className="opacity-50">Mean</span>
       <span className="font-mono text-right">{fmt(stats.mean)}</span>
+      <span className="opacity-50">Std Dev</span>
+      <span className="font-mono text-right">{fmtSec(stats.stdDev)}</span>
+      <span className="opacity-50">CV</span>
+      <span className="font-mono text-right">{fmtPct(stats.cv)}</span>
       <span className="opacity-50">Best Ao5</span>
       <span className="font-mono text-right">{fmt(stats.bestAo5)}</span>
       <span className="opacity-50">Best Ao12</span>
@@ -304,6 +313,8 @@ export function SessionSidebar() {
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [toast, setToast] = useState<{ message: string; onUndo?: () => void } | null>(null);
   const [selectedSolve, setSelectedSolve] = useState<TimerSolve | null>(null);
+  const [renamingId, setRenamingId] = useState<string | null>(null);
+  const [renameValue, setRenameValue] = useState("");
   const { mobileOpen, setMobileOpen } = useMenu();
 
   const handleUndoDelete = (solve: TimerSolve) => {
@@ -355,13 +366,53 @@ export function SessionSidebar() {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
             </svg>
           </button>
+          {activeSession && (
+            <button
+              onClick={() => {
+                setRenamingId(activeSession.id);
+                setRenameValue(activeSession.name);
+              }}
+              className="ml-1.5 p-1.5 rounded opacity-40 hover:opacity-80 transition-opacity shrink-0"
+              title="Rename session"
+            >
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+              </svg>
+            </button>
+          )}
           <button
             onClick={() => setShowPicker(true)}
-            className="ml-2 text-xs px-2 py-1.5 rounded bg-primary/20 hover:bg-primary/30 transition-colors shrink-0"
+            className="ml-1.5 text-xs px-2 py-1.5 rounded bg-primary/20 hover:bg-primary/30 transition-colors shrink-0"
           >
             +
           </button>
         </div>
+
+        {/* Rename input */}
+        {renamingId && (
+          <div className="mb-2">
+            <input
+              autoFocus
+              value={renameValue}
+              onChange={(e) => setRenameValue(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && renameValue.trim()) {
+                  renameSession(renamingId, renameValue.trim());
+                  setRenamingId(null);
+                } else if (e.key === "Escape") {
+                  setRenamingId(null);
+                }
+              }}
+              onBlur={() => {
+                if (renameValue.trim()) {
+                  renameSession(renamingId, renameValue.trim());
+                }
+                setRenamingId(null);
+              }}
+              className="w-full px-3 py-1.5 rounded-md bg-[var(--surface)] border border-[var(--amber)] text-sm outline-none"
+            />
+          </div>
+        )}
 
         {/* Dropdown menu */}
         {dropdownOpen && (

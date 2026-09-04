@@ -34,10 +34,14 @@ export default function TimerPage() {
     phase,
     displayTime,
     scramble,
+    scrambleIndex,
+    scrambleTotal,
     armedAt,
     handleKeyDown,
     handleKeyUp,
     handleTap,
+    prevScramble,
+    nextScramble,
   } = useTimer({
     puzzleType,
     scrambleLength,
@@ -148,8 +152,30 @@ export default function TimerPage() {
         </svg>
       </button>
 
-      <div className="text-[36px] font-medium opacity-70 mb-8 max-w-9xl text-center whitespace-pre-wrap leading-snug tracking-[0.15em]">
-        {scramble}
+      <div className="flex items-center gap-3 mb-8 max-w-9xl">
+        <button
+          onClick={prevScramble}
+          disabled={scrambleIndex === 0 || isActive}
+          className="shrink-0 p-1 rounded opacity-40 hover:opacity-80 disabled:opacity-10 disabled:pointer-events-none transition-opacity"
+          aria-label="Previous scramble"
+        >
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+          </svg>
+        </button>
+        <div className="text-[36px] font-medium opacity-70 text-center whitespace-pre-wrap leading-snug tracking-[0.15em] flex-1">
+          {scramble}
+        </div>
+        <button
+          onClick={nextScramble}
+          disabled={scrambleIndex >= scrambleTotal - 1 || isActive}
+          className="shrink-0 p-1 rounded opacity-40 hover:opacity-80 disabled:opacity-10 disabled:pointer-events-none transition-opacity"
+          aria-label="Next scramble"
+        >
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+          </svg>
+        </button>
       </div>
 
       <div
