@@ -201,8 +201,12 @@ export function useTimer({
   }, []);
 
   const nextScramble = useCallback(() => {
-    setScrambleIndex((i) => Math.min(scrambleHistory.length - 1, i + 1));
-  }, [scrambleHistory.length]);
+    if (scrambleIndex >= scrambleHistory.length - 1) {
+      const newScramble = generateScramble(puzzleType, scrambleLength);
+      setScrambleHistory((prev) => [...prev, newScramble]);
+    }
+    setScrambleIndex((i) => i + 1);
+  }, [scrambleIndex, scrambleHistory.length, puzzleType, scrambleLength]);
 
   return {
     phase,

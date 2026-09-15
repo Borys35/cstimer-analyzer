@@ -23,7 +23,7 @@ function toSolve(s: TimerSolve) {
 function bestTime(solves: TimerSolve[]): number | null {
   const clean = solves.filter((s) => !s.dnf);
   if (clean.length === 0) return null;
-  return Math.min(...clean.map((s) => s.timeMs));
+  return Math.min(...clean.map((s) => s.timeMs + (s.penalty > 0 ? 2000 : 0)));
 }
 
 function computeStats(solves: TimerSolve[]) {

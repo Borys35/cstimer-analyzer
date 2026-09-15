@@ -60,7 +60,7 @@ function toSolve(s: TimerSolve) {
 function bestTime(solves: TimerSolve[]): number | null {
   const clean = solves.filter((s) => !s.dnf);
   if (clean.length === 0) return null;
-  return Math.min(...clean.map((s) => s.timeMs));
+  return Math.min(...clean.map((s) => s.timeMs + (s.penalty > 0 ? 2000 : 0)));
 }
 
 function computeSessionStats(solves: TimerSolve[]) {
@@ -225,7 +225,7 @@ function SolveDetailModal({
 
         <div className="flex gap-2 mb-3">
           <button
-            onClick={() => onUpdate({ penalty: solve.penalty === 1 ? 0 : 1 })}
+            onClick={() => onUpdate({ penalty: solve.penalty === 1 ? 0 : 1, dnf: false })}
             className={`flex-1 px-3 py-2 rounded text-sm font-medium transition-colors ${
               solve.penalty > 0
                 ? "bg-amber-500/30 text-amber-400"
@@ -235,7 +235,7 @@ function SolveDetailModal({
             +2
           </button>
           <button
-            onClick={() => onUpdate({ dnf: !solve.dnf })}
+            onClick={() => onUpdate({ dnf: !solve.dnf, penalty: 0 })}
             className={`flex-1 px-3 py-2 rounded text-sm font-medium transition-colors ${
               solve.dnf
                 ? "bg-red-500/30 text-red-400"

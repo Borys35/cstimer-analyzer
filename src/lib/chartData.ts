@@ -75,12 +75,7 @@ function computeSessionBestAo(solves: Solve[], n: number): number | null {
   let best = Infinity;
   for (let i = 0; i <= clean.length - n; i++) {
     const window = clean.slice(i, i + n);
-    if (window.length < n) break;
-    const dnfs = window.filter((s) => s.dnf).length;
-    if (dnfs > 1) continue;
-    const times = window
-      .filter((s) => !s.dnf)
-      .map((s) => s.timeMs + (s.penalty > 0 ? 2000 : 0));
+    const times = window.map((s) => s.timeMs + (s.penalty > 0 ? 2000 : 0));
     times.sort((a, b) => a - b);
     times.shift();
     times.pop();
