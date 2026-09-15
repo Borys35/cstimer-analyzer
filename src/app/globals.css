@@ -296,17 +296,20 @@ body {
   transform: rotate(var(--tilt, 0deg)) scale(var(--scale, 1));
 }
 
-.logo-hover .logo-eye {
-  transition: transform 0.2s ease, fill 0.2s ease;
-  transform-origin: center;
+.logo-eye-overlay {
+  position: absolute;
+  border-radius: 9999px;
+  background: #0B0E11;
+  opacity: 1;
+  transition: opacity 0.2s ease;
+  pointer-events: none;
 }
-.logo-hover:hover .logo-eye {
-  fill: #9CA3AF;
-  transform: scaleY(0.2);
+.logo-hover:hover .logo-eye-overlay {
+  opacity: 0;
 }
 
 @media (prefers-reduced-motion: reduce) {
   .hero-tile { transition: none; }
   .score-bar-fill { transition: none; }
-  .logo-hover .logo-eye { transition: none; }
+  .logo-eye-overlay { transition: none; }
 }
