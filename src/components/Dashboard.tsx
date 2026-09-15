@@ -5,7 +5,6 @@ import {
   Bar,
   CartesianGrid,
   ComposedChart,
-  ErrorBar,
   Legend,
   Line,
   ResponsiveContainer,
@@ -366,9 +365,7 @@ export default function Dashboard() {
                 />
                 <Legend wrapperStyle={{ fontSize: 12, color: palette.tick }} />
                 <Bar yAxisId="vol" dataKey="vol" name="Solves" fill={palette.volume} opacity={0.5} barSize={14} />
-                <Scatter yAxisId="time" dataKey="sessionMean" name="Session" fill={palette.raw} shape={(props: any) => sessionDot({ ...props, palette })}>
-                  <ErrorBar dataKey="errorBar" width={4} strokeWidth={1} stroke={palette.tick} opacity={0.4} />
-                </Scatter>
+                <Scatter yAxisId="time" dataKey="sessionMean" name="Session" fill={palette.raw} shape={(props: any) => sessionDot({ ...props, palette })} />
                 <Line yAxisId="time" type="linear" dataKey="ao5" name="ao5 (sessions)" stroke={palette.ao5} dot={false} strokeWidth={1} />
                 <Line yAxisId="time" type="linear" dataKey="ao12" name="ao12 (sessions)" stroke={palette.ao12} dot={false} strokeWidth={1.5} />
                 <Line yAxisId="time" type="linear" dataKey="ao100" name="ao100 (sessions)" stroke={palette.ao100} dot={false} strokeWidth={2.5} />

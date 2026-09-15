@@ -24,7 +24,6 @@ export interface ChartRow {
   sessionIsPbSingle?: boolean;
   sessionRank?: number;
   sessionDeltaPct?: number;
-  errorBar?: number[];
   ao5?: number;
   ao12?: number;
   ao100?: number;
@@ -125,10 +124,6 @@ export function buildChartRows(input: BuildChartRowsInput): ChartRow[] {
     row.sessionBestAo5 = bestAo5 ?? undefined;
     row.sessionBestAo12 = bestAo12 ?? undefined;
     row.sessionName = session.meta.name || session.meta.key;
-
-    if (std != null) {
-      row.errorBar = [mean - std, mean + std];
-    }
 
     sessionRows.push({ t, mean });
   }
