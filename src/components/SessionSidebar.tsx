@@ -328,7 +328,10 @@ export function SessionSidebar() {
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [toast, setToast] = useState<{ message: string; onUndo?: () => void } | null>(null);
-  const [selectedSolve, setSelectedSolve] = useState<TimerSolve | null>(null);
+  const [selectedSolveId, setSelectedSolveId] = useState<string | null>(null);
+  const selectedSolve = selectedSolveId
+    ? activeSession?.solves.find((s) => s.id === selectedSolveId) ?? null
+    : null;
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState("");
   const { mobileOpen, setMobileOpen } = useMenu();
@@ -506,7 +509,7 @@ export function SessionSidebar() {
         {activeSession ? (
           <SolveList
             solves={activeSession.solves}
-            onSelectSolve={setSelectedSolve}
+            onSelectSolve={(s) => setSelectedSolveId(s.id)}
           />
         ) : (
           <div className="text-sm opacity-40 text-center py-8">No session selected</div>
@@ -523,7 +526,7 @@ export function SessionSidebar() {
       {selectedSolve && activeSession && (
         <SolveDetailModal
           solve={selectedSolve}
-          onClose={() => setSelectedSolve(null)}
+          onClose={() => setSelectedSolveId(null)}
           onUpdate={(patch) => updateSolve(activeSession.id, selectedSolve.id, patch)}
           onDelete={() => deleteSolve(activeSession.id, selectedSolve.id)}
           onUndoDelete={() => handleUndoDelete(selectedSolve)}

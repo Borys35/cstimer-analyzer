@@ -168,7 +168,7 @@ export default function TimerPage() {
         </div>
         <button
           onClick={nextScramble}
-          disabled={scrambleIndex >= scrambleTotal - 1 || isActive}
+          disabled={isActive}
           className="shrink-0 p-1 rounded opacity-40 hover:opacity-80 disabled:opacity-10 disabled:pointer-events-none transition-opacity"
           aria-label="Next scramble"
         >

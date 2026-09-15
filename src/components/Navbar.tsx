@@ -49,12 +49,10 @@ function LogoFull({ theme, className = "" }: { theme: string; className?: string
   const isDark = theme !== "light";
   return (
     <svg
-      width="130"
-      height="28"
       viewBox="0 0 260 56"
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
-      className={className}
+      className={`w-[130px] h-auto ${className}`}
     >
       <path
         d="M29 0C32.7277 0 35.86 2.54954 36.748 6H18C11.3726 6 6 11.3726 6 18V36.7471C2.54966 35.8589 8.83288e-08 32.7276 0 29V8C0 3.58172 3.58172 1.04692e-07 8 0H29Z"
