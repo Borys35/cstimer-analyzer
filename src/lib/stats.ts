@@ -172,11 +172,46 @@ export function improvementScore(trend: TrendFit | null, currentLevelMs: number)
   ]);
 }
 
+export function median(times: number[]): number | null {
+  if (times.length === 0) return null;
+  const sorted = [...times].sort((a, b) => a - b);
+  const mid = Math.floor(sorted.length / 2);
+  return sorted.length % 2 === 0
+    ? (sorted[mid - 1] + sorted[mid]) / 2
+    : sorted[mid];
+}
+
+export function medianAbsoluteDeviation(times: number[]): number | null {
+  const med = median(times);
+  if (med === null) return null;
+  return median(times.map((t) => Math.abs(t - med)));
+}
+
+export function madCv(times: number[]): number | null {
+  const med = median(times);
+  const mad = medianAbsoluteDeviation(times);
+  if (med === null || mad === null || med === 0) return null;
+  return (1.4826 * mad) / med;
+}
+
+export function iqrCv(times: number[]): number | null {
+  const med = median(times);
+  if (med === null || med === 0) return null;
+  const sorted = [...times].sort((a, b) => a - b);
+  const q = (p: number) => {
+    const idx = (sorted.length - 1) * p;
+    const lo = Math.floor(idx);
+    const hi = Math.ceil(idx);
+    if (lo === hi) return sorted[lo];
+    return sorted[lo] + (sorted[hi] - sorted[lo]) * (idx - lo);
+  };
+  return (q(0.75) - q(0.25)) / med;
+}
+
 export function consistencyScore(last50: number[]): number | null {
   if (last50.length < 10) return null;
-  const mean = last50.reduce((a, b) => a + b, 0) / last50.length;
-  const variance = last50.reduce((a, b) => a + (b - mean) ** 2, 0) / last50.length;
-  const cv = Math.sqrt(variance) / mean;
+  const cv = madCv(last50);
+  if (cv === null) return null;
   return piecewise(cv, [
     [0.04, 100],
     [0.07, 90],
@@ -186,13 +221,6 @@ export function consistencyScore(last50: number[]): number | null {
     [0.25, 20],
     [0.45, 0],
   ]);
-}
-
-export function coefficientOfVariation(times: number[]): number {
-  if (times.length === 0) return NaN;
-  const mean = times.reduce((a, b) => a + b, 0) / times.length;
-  const variance = times.reduce((a, b) => a + (b - mean) ** 2, 0) / times.length;
-  return Math.sqrt(variance) / mean;
 }
 
 export interface FrequencyResult {
@@ -344,7 +372,7 @@ export function analyze(input: AnalyzeInput): ScoredAnalysis {
     tier: headline != null ? tierFor(headline) : null,
     currentLevelMs,
     trend,
-    consistencyCv: lastN.length >= 10 ? coefficientOfVariation(lastN) : null,
+    consistencyCv: lastN.length >= 10 ? madCv(lastN) : null,
     freq,
     lastNTimes: lastN,
     days,

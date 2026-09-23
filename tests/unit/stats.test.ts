@@ -5,6 +5,9 @@ import {
   separateJunk,
   pctPerWeek,
   fmtTime,
+  median,
+  madCv,
+  iqrCv,
   LAST_N,
 } from "@/lib/stats";
 import type { Solve } from "@/lib/types";
@@ -86,5 +89,38 @@ describe("fmtTime", () => {
   });
   it("formats minutes with padded seconds", () => {
     expect(fmtTime(75400)).toBe("1:15.40");
+  });
+});
+
+describe("median", () => {
+  it("odd count picks middle", () => {
+    expect(median([3, 1, 2])).toBe(2);
+  });
+  it("even count averages middle two", () => {
+    expect(median([3, 1, 2, 4])).toBe(2.5);
+  });
+  it("empty returns null", () => {
+    expect(median([])).toBeNull();
+  });
+});
+
+describe("madCv", () => {
+  it("resists a single large outlier", () => {
+    const baseline = Array.from({ length: 20 }, (_, i) => 20000 + (i % 5) * 100);
+    const withOutlier = [...baseline, 80000];
+    const cv = madCv(baseline);
+    const cvO = madCv(withOutlier);
+    expect(cv).not.toBeNull();
+    expect(cvO).not.toBeNull();
+    expect(cvO!).toBeCloseTo(cv!, 5);
+  });
+});
+
+describe("iqrCv", () => {
+  it("positive when times vary", () => {
+    const times = Array.from({ length: 20 }, (_, i) => 20000 + (i % 5) * 100);
+    const v = iqrCv(times);
+    expect(v).not.toBeNull();
+    expect(v!).toBeGreaterThan(0);
   });
 });

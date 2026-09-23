@@ -4,7 +4,7 @@ import { useState, useMemo } from "react";
 import { useSession } from "@/components/SessionProvider";
 import { SessionFilter } from "@/components/SessionFilter";
 import { formatTimerTime } from "@/lib/timer-utils";
-import { rollingAverage } from "@/lib/stats";
+import { rollingAverage, median, madCv, iqrCv } from "@/lib/stats";
 import { useImportExport } from "@/lib/use-import-export";
 import { Toast } from "@/components/Toast";
 import type { TimerSolve } from "@/lib/types";
@@ -30,11 +30,17 @@ function computeStats(solves: TimerSolve[]) {
   const total = solves.length;
   const dnfs = solves.filter((s) => s.dnf).length;
   const best = bestTime(solves);
+  const cleanTimes = solves
+    .filter((s) => !s.dnf)
+    .map((s) => s.timeMs + (s.penalty > 0 ? 2000 : 0));
+  const med = median(cleanTimes);
+  const rCv = cleanTimes.length >= 3 ? madCv(cleanTimes) : null;
+  const iqr = cleanTimes.length >= 3 ? iqrCv(cleanTimes) : null;
   const ao5 = rollingAverage(solves.map(toSolve), 5);
   const ao12 = rollingAverage(solves.map(toSolve), 12);
   const lastAo5 = ao5.length > 0 && isFinite(ao5[ao5.length - 1].ms) ? ao5[ao5.length - 1].ms : null;
   const lastAo12 = ao12.length > 0 && isFinite(ao12[ao12.length - 1].ms) ? ao12[ao12.length - 1].ms : null;
-  return { total, dnfs, best, lastAo5, lastAo12 };
+  return { total, dnfs, best, med, rCv, iqr, lastAo5, lastAo12 };
 }
 
 export default function StatsPage() {
@@ -111,12 +117,16 @@ export default function StatsPage() {
                   </span>
                 </div>
 
-                <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 text-center">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center">
                   <StatCard label="Solves" value={String(stats.total)} />
                   <StatCard label="DNFs" value={String(stats.dnfs)} />
                   <StatCard
                     label="Best"
                     value={stats.best != null ? formatTimerTime(stats.best) : "-"}
+                  />
+                  <StatCard
+                    label="Median"
+                    value={stats.med != null ? formatTimerTime(stats.med) : "-"}
                   />
                   <StatCard
                     label="Ao5"
@@ -125,6 +135,14 @@ export default function StatsPage() {
                   <StatCard
                     label="Ao12"
                     value={stats.lastAo12 != null ? formatTimerTime(stats.lastAo12) : "-"}
+                  />
+                  <StatCard
+                    label="rCV (MAD)"
+                    value={stats.rCv != null ? `${(stats.rCv * 100).toFixed(1)}%` : "-"}
+                  />
+                  <StatCard
+                    label="IQR"
+                    value={stats.iqr != null ? `${(stats.iqr * 100).toFixed(1)}%` : "-"}
                   />
                 </div>
 

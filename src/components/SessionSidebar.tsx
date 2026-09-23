@@ -5,7 +5,7 @@ import type { PuzzleType, TimerSolve } from "@/lib/types";
 import { useSession } from "@/components/SessionProvider";
 import { useMenu } from "@/components/MenuContext";
 import { formatTimerTime } from "@/lib/timer-utils";
-import { rollingAverage, coefficientOfVariation } from "@/lib/stats";
+import { rollingAverage, median, madCv, iqrCv } from "@/lib/stats";
 import { Toast } from "@/components/Toast";
 
 const PUZZLE_OPTIONS: PuzzleType[] = ["3x3", "2x2", "Pyraminx", "Square-1"];
@@ -68,11 +68,13 @@ function computeSessionStats(solves: TimerSolve[]) {
   const clean = solves.filter((s) => !s.dnf);
   const times = clean.map((s) => s.timeMs + (s.penalty > 0 ? 2000 : 0));
   const mean = times.length > 0 ? times.reduce((a, b) => a + b, 0) / times.length : null;
+  const med = median(times);
   const stdDev =
     times.length >= 2
       ? Math.sqrt(times.reduce((a, t) => a + (t - mean!) ** 2, 0) / times.length)
       : null;
-  const cv = times.length >= 2 ? coefficientOfVariation(times) : null;
+  const rCv = times.length >= 3 ? madCv(times) : null;
+  const iqr = times.length >= 3 ? iqrCv(times) : null;
   const ao5Arr = rollingAverage(solves.map(toSolve), 5);
   const ao12Arr = rollingAverage(solves.map(toSolve), 12);
   const lastAo5Ms = ao5Arr.length > 0 ? ao5Arr[ao5Arr.length - 1].ms : null;
@@ -83,7 +85,7 @@ function computeSessionStats(solves: TimerSolve[]) {
   const currentAo12 = lastAo12Ms !== null && isFinite(lastAo12Ms) ? lastAo12Ms : null;
   const ao12Valid = ao12Arr.filter((a) => isFinite(a.ms));
   const bestAo12 = ao12Valid.length > 0 ? Math.min(...ao12Valid.map((a) => a.ms)) : null;
-  return { best, mean, stdDev, cv, currentAo5, bestAo5, currentAo12, bestAo12 };
+  return { best, mean, med, stdDev, rCv, iqr, currentAo5, bestAo5, currentAo12, bestAo12 };
 }
 
 function SolveList({
@@ -283,12 +285,20 @@ function SessionStats({ solves }: { solves: TimerSolve[] }) {
         <span className="font-mono text-base text-center">{fmt(stats.mean)}</span>
       </div>
       <div className="flex flex-col gap-0.5">
+        <span className="opacity-50 text-center text-xs">Median</span>
+        <span className="font-mono text-base text-center">{fmt(stats.med)}</span>
+      </div>
+      <div className="flex flex-col gap-0.5">
         <span className="opacity-50 text-center text-xs">Std Dev</span>
         <span className="font-mono text-base text-center">{fmtSec(stats.stdDev)}</span>
       </div>
       <div className="flex flex-col gap-0.5">
-        <span className="opacity-50 text-center text-xs">CV</span>
-        <span className="font-mono text-base text-center">{fmtPct(stats.cv)}</span>
+        <span className="opacity-50 text-center text-xs">rCV (MAD)</span>
+        <span className="font-mono text-base text-center">{fmtPct(stats.rCv)}</span>
+      </div>
+      <div className="flex flex-col gap-0.5">
+        <span className="opacity-50 text-center text-xs">IQR</span>
+        <span className="font-mono text-base text-center">{fmtPct(stats.iqr)}</span>
       </div>
       <div className="flex flex-col gap-0.5">
         <span className="opacity-50 text-center text-xs">Best Ao5</span>

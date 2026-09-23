@@ -1,6 +1,7 @@
 import type { ParsedSession, Solve } from "./types";
 import {
   dailyBuckets,
+  madCv,
   projectForward,
   rollingAverage,
   trendPoints,
@@ -60,12 +61,9 @@ function computeSessionStd(solves: Solve[]): number | null {
 
 function computeSessionCv(solves: Solve[]): number | null {
   const clean = solves.filter((s) => !s.dnf);
-  if (clean.length < 2) return null;
+  if (clean.length < 3) return null;
   const times = clean.map((s) => s.timeMs + (s.penalty > 0 ? 2000 : 0));
-  const mean = times.reduce((a, b) => a + b, 0) / times.length;
-  if (mean === 0) return null;
-  const variance = times.reduce((a, b) => a + (b - mean) ** 2, 0) / times.length;
-  return Math.sqrt(variance) / mean;
+  return madCv(times);
 }
 
 function computeSessionBestAo(solves: Solve[], n: number): number | null {

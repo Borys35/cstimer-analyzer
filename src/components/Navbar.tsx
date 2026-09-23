@@ -16,8 +16,8 @@ export function Navbar() {
           <Image
             src="/logo.svg"
             alt="CubeTimer"
-            width={68}
-            height={56}
+            width={34}
+            height={28}
             className="md:hidden"
             priority
           />
@@ -25,9 +25,9 @@ export function Navbar() {
           <Image
             src={theme === "light" ? "/logo-light.svg" : "/logo-dark.svg"}
             alt="CubeTimer"
-            width={260}
-            height={56}
-            className="hidden md:block h-[56px] w-auto"
+            width={130}
+            height={28}
+            className="hidden md:block h-[28px] w-auto"
             priority
           />
           {/* Eye overlays — hidden on hover */}
