@@ -21,6 +21,8 @@ strict-side anchors.
 
 ## 1. Consistency benchmarks (CV = stddev/mean of recent singles)
 
+> **Implementation note (2026-10-07):** the app scores consistency with a robust **MAD-based CV** — `madCv = 1.4826 × median(|xᵢ − median|) / median` (`src/lib/stats.ts`) — not stddev/mean. The bands in §4.1 were calibrated on stddev-CV and carry over unchanged: MAD-CV ≈ CV for well-behaved single distributions, and the median center only protects against individual blow-up solves — exactly the failures §1 flags as unmeasured.
+
 Direct published CV distributions by skill level do not exist. What exists: (a) a handful of measured
 solve logs with mean+stddev posted publicly, (b) a long-standing community rule of thumb, and (c) one
 full-WCA-dataset finding that *relative* dispersion is roughly constant across skill levels.

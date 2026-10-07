@@ -13,3 +13,7 @@ Default five-role vocabulary. See `docs/agents/triage-labels.md`.
 ### Domain docs
 
 Single-context: `CONTEXT.md` at root + `docs/adr/`. See `docs/agents/domain.md`.
+
+### UI spec
+
+`docs/design-system.md` — design tokens, typography, and per-component specs. Read before touching styles or layout.

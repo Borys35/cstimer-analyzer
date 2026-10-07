@@ -200,6 +200,8 @@ See research-scoring.md §2 for the full benchmark table. Key points:
 
 #### Consistency score (CV of raw singles)
 
+> **Implementation note (2026-10-07):** the app computes this axis with `madCv` (robust, median-based, 1.4826 × MAD / median; `src/lib/stats.ts`). All CV bands in this doc carry over unchanged.
+
 A single scale (not level-adjusted) is defensible based on the evidence in research-scoring.md §1:
 measured CVs cluster at 8–15% regardless of level. However, **what counts as "good" consistency
 varies in coaching value by level:**
@@ -304,6 +306,8 @@ COLL/WV practice, 10 min normal timed solves, 5 min review. Total: 50 min.
 ## 4. Diminishing returns — When each axis stops mattering
 
 ### 4.1 Consistency (CV)
+
+> **Implementation note:** "CV" here is `madCv` (robust, median-based) — `src/lib/stats.ts`. Bands unchanged.
 
 | CV range | Coaching value | Diminishing returns threshold |
 |---|---|---|

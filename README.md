@@ -28,7 +28,7 @@ npm run build      # production build (fully static — Vercel-ready)
 
 - Create/delete/rename sessions per puzzle type (3x3, 2x2, Pyraminx, Square-1)
 - Dropdown session picker sorted newest-first
-- Session stats bar: best single, current/best ao5, current/best ao12
+- Session stats bar: best single, mean, median, std dev, rCV (MAD), IQR, and current/best ao5 / ao12
 - Full solve list with +2 penalty, DNF, and delete actions
 - Undo delete via toast notification
 
@@ -37,7 +37,7 @@ npm run build      # production build (fully static — Vercel-ready)
 Upload a cstimer export (.txt) → get a progress chart, scoring breakdown, and prescriptions.
 
 - **Scoring model**: three sub-scores (improvement, consistency, frequency) weighted by skill level → headline grade
-- **Chart**: session means with error bars, rolling ao5/ao12/ao100, trend line, projection
+- **Chart**: session means with rolling ao5/ao12/ao100, trend line, projection
 - **Prescriptions**: drills from primary coaching sources, targeted at your weakest axis
 
 ### Settings
@@ -77,6 +77,8 @@ Three sub-scores feed one headline number. Weights shift by your current level:
 | 60–79    | decent   |
 | 40–59    | bad      |
 | < 40     | horrible |
+
+Consistency is scored on a robust median-based coefficient of variation (MAD-CV), so a single blow-up solve can't wreck the score.
 
 Full scoring rationale in [`docs/research-scoring.md`](docs/research-scoring.md) and [`docs/research-prescriptions.md`](docs/research-prescriptions.md).
 

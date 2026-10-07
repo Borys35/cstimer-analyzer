@@ -115,7 +115,7 @@ Two font families loaded via Google Fonts in `globals.css`:
 
 ### Usage rules
 
-- **JetBrains Mono**: Use `font-mono` class or `fontFamily: "var(--font-mono)"` for any numeric display — scores, times, percentages, CV values. Tabular figures keep columns aligned.
+- **JetBrains Mono**: Use `font-mono` class or `fontFamily: "var(--font-mono)"` for any numeric display — scores, times, percentages, rCV (MAD) values. Tabular figures keep columns aligned.
 - **DM Sans**: Use `font-sans` class (default body font) for everything else — headings, paragraph text, labels, button text.
 
 ### Type scale (approximate)
@@ -259,7 +259,7 @@ Structure (top to bottom):
 
 1. **Dropdown button**: shows active session name · puzzle type · solve count
 2. **Dropdown menu**: all sessions sorted newest-first, each showing name + puzzle + count
-3. **Stats bar**: 2-column grid — best, ao5, best ao5, ao12, best ao12
+3. **Stats bar**: 2-column × 5-row grid — Best, Mean, Median, Std Dev, rCV (MAD), IQR, Best Ao5, Best Ao12, Ao5, Ao12. Best/Mean/Median and the Ao rows are times; Std Dev is seconds; rCV (MAD) and IQR are percentages. rCV/IQR render only with ≥3 clean solves.
 4. **Solve list**: all solves (scrollable), each with time, +2/DNF/delete buttons
 
 Auto-collapse: sidebar width → 0 during armed/running phases (300ms transition).
@@ -267,7 +267,14 @@ Auto-collapse: sidebar width → 0 during armed/running phases (300ms transition
 ### Navbar
 
 Fixed top bar: `bg-[var(--surface)] border-b border-[var(--border)] shrink-0`.
-Left: "CubTimer" brand link. Right: Timer/Stats/Settings links + ThemeToggle.
+Left: "CubeTimer" brand link (class `logo-hover`). Right: Timer/Stats/Settings links + ThemeToggle.
+
+Brand logo (`Navbar.tsx`):
+
+- Mobile: `logo.svg` at 34×28, `md:hidden`
+- Desktop: `logo-dark.svg` / `logo-light.svg` (theme-aware) at 130×28 with `h-[28px] w-auto`, `hidden md:block`
+
+Logo hover eyes: two `.logo-eye-overlay` spans sit over the cube's eyes inside the link. Mobile placement `left-[45%]` / `left-[65%]`, `top-[29%]`, `w-[9%] h-[39%]`; desktop `md:left-[12%]` / `md:left-[17%]`, `md:top-[34%]`, `md:w-[2.3%] md:h-[29%]`. Rounded dark squares, `pointer-events: none`, `opacity` transition 0.2s. `.logo-hover:hover .logo-eye-overlay { opacity: 0 }` hides the eyes on hover.
 
 ---
 
@@ -439,4 +446,7 @@ The `.score-hero` layout is the only component using custom CSS for responsive b
 | `src/components/ThemeProvider.tsx`     | Theme context, cycle function, localStorage persistence            |
 | `src/components/ScoreboardHero.tsx`    | Gauge ring SVG, score display, sub-score bars                      |
 | `src/components/Dashboard.tsx`         | Upload screen, filter bar, chart, prescriptions, sessions          |
+| `src/components/StatsPage.tsx`         | Per-session stat cards, session solve table, import/export         |
 | `src/components/Toast.tsx`             | Toast notification with optional undo action                       |
+| `src/lib/stats.ts`                     | Statistics — median, rollingAverage, madCv, iqrCv, bucketing, trend/projection, analyze |
+| `src/lib/chartData.ts`                 | Chart row aggregation — per-session mean/std/CV, rolling averages, trend, projection, volume |
