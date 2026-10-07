@@ -1,11 +1,10 @@
 import { useState, useCallback, useEffect, useRef } from "react";
 import type { TimerPhase } from "@/lib/timer-utils";
-import { generateScramble } from "@/lib/scramble";
+import { generateScramble, generateFallbackScramble } from "@/lib/scramble";
 import type { PuzzleType } from "@/lib/types";
 
 export interface UseTimerOptions {
   puzzleType: PuzzleType;
-  scrambleLength: number;
   startDelayMs: number;
   inspectionEnabled?: boolean;
   inspectionDurationSec?: number;
@@ -28,7 +27,6 @@ export interface UseTimerReturn {
 
 export function useTimer({
   puzzleType,
-  scrambleLength,
   startDelayMs,
   inspectionEnabled = false,
   inspectionDurationSec = 15,
@@ -37,7 +35,7 @@ export function useTimer({
   const [phase, setPhase] = useState<TimerPhase>("idle");
   const [displayTime, setDisplayTime] = useState(0);
   const [scrambleHistory, setScrambleHistory] = useState<string[]>(() => [
-    generateScramble(puzzleType, scrambleLength),
+    generateFallbackScramble(puzzleType),
   ]);
   const [scrambleIndex, setScrambleIndex] = useState(0);
 
@@ -65,7 +63,6 @@ export function useTimer({
       const scrambleRef = scrambleHistory[scrambleIndex];
       const onSolveRef = onSolve;
       const puzzleRef = puzzleType;
-      const lenRef = scrambleLength;
 
       const recordAndReset = () => {
         cancelAnimationFrame(rafRef.current);
@@ -75,16 +72,28 @@ export function useTimer({
         setPhase("idle");
         solveInFlightRef.current = false;
         onSolveRef({ timeMs, scramble: scrambleRef, dnf: false, penalty });
-        setScrambleHistory((prev) => {
-          const next = [...prev, generateScramble(puzzleRef, lenRef)];
-          setScrambleIndex(next.length - 1);
-          return next;
-        });
+        
+        generateScramble(puzzleRef)
+          .then((newScramble) => {
+            setScrambleHistory((prev) => {
+              const next = [...prev, newScramble];
+              setScrambleIndex(next.length - 1);
+              return next;
+            });
+          })
+          .catch(() => {
+            const fallback = generateFallbackScramble(puzzleRef);
+            setScrambleHistory((prev) => {
+              const next = [...prev, fallback];
+              setScrambleIndex(next.length - 1);
+              return next;
+            });
+          });
       };
 
       stopTimingRef.current = recordAndReset;
     },
-    [tick, onSolve, scrambleHistory, scrambleIndex, puzzleType, scrambleLength],
+    [tick, onSolve, scrambleHistory, scrambleIndex, puzzleType],
   );
 
   const stopTimingRef = useRef<() => void>(() => {});
@@ -98,13 +107,25 @@ export function useTimer({
       setPhase("idle");
       solveInFlightRef.current = false;
       onSolve({ timeMs: 0, scramble: scrambleHistory[scrambleIndex], dnf, penalty });
-      setScrambleHistory((prev) => {
-        const next = [...prev, generateScramble(puzzleType, scrambleLength)];
-        setScrambleIndex(next.length - 1);
-        return next;
-      });
+      
+      generateScramble(puzzleType)
+        .then((newScramble) => {
+          setScrambleHistory((prev) => {
+            const next = [...prev, newScramble];
+            setScrambleIndex(next.length - 1);
+            return next;
+          });
+        })
+        .catch(() => {
+          const fallback = generateFallbackScramble(puzzleType);
+          setScrambleHistory((prev) => {
+            const next = [...prev, fallback];
+            setScrambleIndex(next.length - 1);
+            return next;
+          });
+        });
     },
-    [onSolve, scrambleHistory, scrambleIndex, puzzleType, scrambleLength],
+    [onSolve, scrambleHistory, scrambleIndex, puzzleType],
   );
 
   const handleKeyDown = useCallback(() => {
@@ -185,16 +206,36 @@ export function useTimer({
     };
   }, []);
 
+  const prevPuzzleRef = useRef(puzzleType);
   useEffect(() => {
-    if (!solveInFlightRef.current && phase !== "armed" && phase !== "inspection") {
-      const newScramble = generateScramble(puzzleType, scrambleLength);
-      setScrambleHistory((prev) => {
-        const next = [...prev, newScramble];
-        setScrambleIndex(next.length - 1);
-        return next;
-      });
+    if (prevPuzzleRef.current !== puzzleType) {
+      prevPuzzleRef.current = puzzleType;
+      const initial = generateFallbackScramble(puzzleType);
+      setScrambleHistory([initial]);
+      setScrambleIndex(0);
     }
-  }, [puzzleType, scrambleLength]);
+
+    if (!solveInFlightRef.current && phase !== "armed" && phase !== "inspection") {
+      let mounted = true;
+      generateScramble(puzzleType)
+        .then((newScramble) => {
+          if (mounted && newScramble) {
+            setScrambleHistory((prev) => {
+              if (prev.length <= 1) {
+                return [newScramble];
+              }
+              const next = [...prev];
+              next[next.length - 1] = newScramble;
+              return next;
+            });
+          }
+        })
+        .catch(() => {});
+      return () => {
+        mounted = false;
+      };
+    }
+  }, [puzzleType, phase]);
 
   const prevScramble = useCallback(() => {
     setScrambleIndex((i) => Math.max(0, i - 1));
@@ -202,16 +243,27 @@ export function useTimer({
 
   const nextScramble = useCallback(() => {
     if (scrambleIndex >= scrambleHistory.length - 1) {
-      const newScramble = generateScramble(puzzleType, scrambleLength);
-      setScrambleHistory((prev) => [...prev, newScramble]);
+      const fallback = generateFallbackScramble(puzzleType);
+      setScrambleHistory((prev) => [...prev, fallback]);
+      setScrambleIndex((i) => i + 1);
+      generateScramble(puzzleType)
+        .then((newScramble) => {
+          setScrambleHistory((prev) => {
+            const next = [...prev];
+            next[next.length - 1] = newScramble;
+            return next;
+          });
+        })
+        .catch(() => {});
+    } else {
+      setScrambleIndex((i) => i + 1);
     }
-    setScrambleIndex((i) => i + 1);
-  }, [scrambleIndex, scrambleHistory.length, puzzleType, scrambleLength]);
+  }, [scrambleIndex, scrambleHistory.length, puzzleType]);
 
   return {
     phase,
     displayTime,
-    scramble: scrambleHistory[scrambleIndex],
+    scramble: scrambleHistory[scrambleIndex] || generateFallbackScramble(puzzleType),
     scrambleIndex,
     scrambleTotal: scrambleHistory.length,
     armedAt: armedAtRef.current,

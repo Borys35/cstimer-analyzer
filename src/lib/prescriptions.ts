@@ -1,7 +1,6 @@
 import type { ScoredAnalysis } from "./stats";
 import { fmtTime } from "./stats";
 import type { SplitStats } from "./splits";
-import { PHASE_LABELS, REFERENCE_SHARES } from "./splits";
 
 export type Axis = "Improvement" | "Consistency" | "Frequency";
 
@@ -88,10 +87,20 @@ function frequencyEstimate(e: PrescriptionEvidence): string {
 }
 
 function splitLine(e: PrescriptionEvidence): string {
-  if (!e.splits.shares || !e.splits.worst || e.event !== "3x3") return "";
+  if (!e.splits.shares || !e.splits.worst) return "";
   const w = e.splits.worst;
   if (w.shareGap <= 0.02) return "";
-  return `Split evidence: ` + PHASE_LABELS[w.phase] + ` consumes ` + (e.splits.shares[w.phase] * 100).toFixed(0) + `% of your solve vs typical ` + (REFERENCE_SHARES[w.phase] * 100).toFixed(0) + `%; the excess is worth ~` + fmtTime(w.excessMs) + `.`;
+  return (
+    `Split evidence: ` +
+    w.label +
+    ` consumes ` +
+    (w.share * 100).toFixed(0) +
+    `% of your solve vs typical ` +
+    (w.referenceShare * 100).toFixed(0) +
+    `%; the excess is worth ~` +
+    fmtTime(w.excessMs) +
+    `.`
+  );
 }
 
 type CellContent = Omit<Prescription, "estimate">;

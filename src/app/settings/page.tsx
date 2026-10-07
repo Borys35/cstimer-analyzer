@@ -7,21 +7,11 @@ import { Toast } from "@/components/Toast";
 import type { PuzzleType } from "@/lib/types";
 import { useTheme } from "@/components/ThemeProvider";
 
-const PUZZLE_TYPES: PuzzleType[] = ["3x3", "2x2", "Pyraminx", "Square-1"];
-
 export default function SettingsPage() {
   const { settings, updateSettings, sessions, clearAllSessions } = useSession();
   const { toast, setToast, fileInputRef, handleImport, handleExport } = useImportExport();
   const [showClearConfirm, setShowClearConfirm] = useState(false);
   const { theme: currentTheme, cycleTheme } = useTheme();
-
-  const handleScrambleLength = (puzzle: PuzzleType, value: string) => {
-    const num = Number(value);
-    if (num < 1 || num > 100) return;
-    updateSettings({
-      scrambleLengths: { ...settings.scrambleLengths, [puzzle]: num },
-    });
-  };
 
   return (
     <div className="max-w-2xl mx-auto p-6">
@@ -127,25 +117,6 @@ export default function SettingsPage() {
               {settings.hideTimer ? "On" : "Off"}
             </button>
           </SettingRow>
-        </div>
-      </section>
-
-      <section className="mb-8">
-        <h2 className="text-lg font-semibold mb-3">Scramble Lengths</h2>
-        <div className="space-y-3 bg-surface rounded-lg p-4">
-          {PUZZLE_TYPES.map((puzzle) => (
-            <SettingRow key={puzzle} label={puzzle} description="Moves per scramble">
-              <input
-                type="number"
-                min={1}
-                max={100}
-                value={settings.scrambleLengths[puzzle] ?? 20}
-                aria-label={`${puzzle} scramble`}
-                onChange={(e) => handleScrambleLength(puzzle, e.target.value)}
-                className="w-20 text-center text-sm font-mono bg-base rounded px-2 py-1"
-              />
-            </SettingRow>
-          ))}
         </div>
       </section>
 

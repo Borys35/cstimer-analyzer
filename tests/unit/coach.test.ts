@@ -19,7 +19,13 @@ function solves(days: number[], perDay = 6): Solve[] {
   );
 }
 
-const NO_SPLITS: SplitStats = { usableCount: 0, shares: null, worst: null };
+const NO_SPLITS: SplitStats = {
+  usableCount: 0,
+  phaseCount: 0,
+  labels: [],
+  shares: null,
+  worst: null,
+};
 
 describe("buildCoachReport", () => {
   it("marks exactly one scored axis as weak even when a Data card exists", () => {
@@ -42,20 +48,17 @@ describe("buildCoachReport", () => {
     expect(report.focus[0].isWeak).toBe(true);
   });
 
-  it("gates split hints to 3x3", () => {
+  it("provides split hints when shares are missing", () => {
     const clean = solves(Array.from({ length: 21 }, (_, i) => i));
     const analysis = analyze({ rangedClean: clean, allClean: clean, nowMs: NOW });
-    for (const event of ["3x3", "2x2"]) {
-      const report = buildCoachReport({
-        analysis,
-        last50Times: analysis.lastNTimes,
-        splits: NO_SPLITS,
-        event,
-        label: event,
-      });
-      if (event === "3x3") expect(report.splitHint).toContain("multi-phase");
-      else expect(report.splitHint).toBeNull();
-    }
+    const report = buildCoachReport({
+      analysis,
+      last50Times: analysis.lastNTimes,
+      splits: NO_SPLITS,
+      event: "3x3",
+      label: "3x3",
+    });
+    expect(report.splitHint).toContain("multi-phase");
   });
 
   it("short ranges add a Data card but still grade from remaining axes", () => {

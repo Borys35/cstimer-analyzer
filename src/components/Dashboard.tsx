@@ -28,6 +28,7 @@ import {
   type ChartPalette,
 } from "@/lib/theme";
 import ScoreboardHero from "@/components/ScoreboardHero";
+import AnalyticsViews from "@/components/AnalyticsViews";
 
 const PUZZLE_TYPES: PuzzleType[] = [
   "2x2",
@@ -401,6 +402,9 @@ export default function Dashboard() {
           )}
         </div>
       </section>
+
+      {/* Analytics (Histogram, Time of Day, Session Comparison) */}
+      <AnalyticsViews cleanSolves={d.clean} sessions={data.sessions} puzzleType={selectedType} />
 
       {/* Prescriptions */}
       <section className="mb-5 space-y-2">

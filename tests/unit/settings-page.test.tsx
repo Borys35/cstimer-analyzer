@@ -22,7 +22,6 @@ function mockSession(overrides: Record<string, unknown> = {}) {
       inspectionEnabled: false,
       inspectionDurationSec: 15,
       soundEnabled: false,
-      scrambleLengths: { "3x3": 20, "2x2": 11, Pyraminx: 8, "Square-1": 11 },
     },
     sessions: [
       { id: "s1", name: "Session 1", puzzleType: "3x3", solves: [] },
@@ -58,27 +57,6 @@ describe("SettingsPage", () => {
     expect(session.updateSettings).toHaveBeenCalledWith({ startDelayMs: 1000 });
   });
 
-  it("renders scramble length inputs for each puzzle type", () => {
-    const session = mockSession();
-    vi.mocked(useSession).mockReturnValue(session as never);
-    render(<SettingsPage />);
-    expect(screen.getAllByText("3x3").length).toBeGreaterThanOrEqual(1);
-    expect(screen.getAllByText("2x2").length).toBeGreaterThanOrEqual(1);
-    expect(screen.getAllByText("Pyraminx").length).toBeGreaterThanOrEqual(1);
-    expect(screen.getAllByText("Square-1").length).toBeGreaterThanOrEqual(1);
-  });
-
-  it("calls updateSettings when a scramble length changes", () => {
-    const session = mockSession();
-    vi.mocked(useSession).mockReturnValue(session as never);
-    render(<SettingsPage />);
-    const input = screen.getByLabelText(/3x3 scramble/i);
-    fireEvent.change(input, { target: { value: "25" } });
-    expect(session.updateSettings).toHaveBeenCalledWith({
-      scrambleLengths: { "3x3": 25, "2x2": 11, Pyraminx: 8, "Square-1": 11 },
-    });
-  });
-
   it("renders inspection toggle as off by default", () => {
     const session = mockSession();
     vi.mocked(useSession).mockReturnValue(session as never);
@@ -103,7 +81,6 @@ describe("SettingsPage", () => {
         inspectionEnabled: true,
         inspectionDurationSec: 10,
         soundEnabled: false,
-        scrambleLengths: { "3x3": 20, "2x2": 11, Pyraminx: 8, "Square-1": 11 },
       },
     });
     vi.mocked(useSession).mockReturnValue(session as never);

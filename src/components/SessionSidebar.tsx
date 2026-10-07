@@ -5,10 +5,22 @@ import type { PuzzleType, TimerSolve } from "@/lib/types";
 import { useSession } from "@/components/SessionProvider";
 import { useMenu } from "@/components/MenuContext";
 import { formatTimerTime } from "@/lib/timer-utils";
-import { rollingAverage, median, madCv, iqrCv } from "@/lib/stats";
+import { rollingAverage, rollingMean, median, madCv, iqrCv, computePersonalBests, type PersonalBests } from "@/lib/stats";
 import { Toast } from "@/components/Toast";
 
-const PUZZLE_OPTIONS: PuzzleType[] = ["3x3", "2x2", "Pyraminx", "Square-1"];
+const PUZZLE_OPTIONS: PuzzleType[] = [
+  "3x3",
+  "2x2",
+  "4x4",
+  "5x5",
+  "6x6",
+  "7x7",
+  "Pyraminx",
+  "Megaminx",
+  "Skewb",
+  "Square-1",
+  "Clock",
+];
 
 export function NewSessionPicker({
   onSelect,
@@ -18,10 +30,16 @@ export function NewSessionPicker({
   onClose: () => void;
 }) {
   return (
-    <div className="fixed inset-0 flex items-center justify-center z-50">
-      <div className="bg-[var(--surface-2)] border border-[var(--border)] rounded-lg p-6 shadow-2xl w-72">
+    <div
+      className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center z-50 p-4"
+      onClick={onClose}
+    >
+      <div
+        className="bg-[var(--surface-2)] border border-[var(--border)] rounded-lg p-6 shadow-2xl w-full max-w-sm"
+        onClick={(e) => e.stopPropagation()}
+      >
         <h2 className="text-lg font-semibold mb-4">Pick puzzle</h2>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-3 gap-2.5 max-h-[60vh] overflow-y-auto">
           {PUZZLE_OPTIONS.map((puzzle) => (
             <button
               key={puzzle}
@@ -29,7 +47,7 @@ export function NewSessionPicker({
                 onSelect(puzzle);
                 onClose();
               }}
-              className="px-4 py-3 rounded-md bg-[var(--surface)] border border-[var(--border)] hover:bg-[var(--surface-3)] hover:border-[var(--amber)] transition-colors text-sm font-medium"
+              className="px-3 py-2.5 rounded-md bg-[var(--surface)] border border-[var(--border)] hover:bg-[var(--surface-3)] hover:border-[var(--amber)] transition-colors text-sm font-medium text-center"
             >
               {puzzle}
             </button>
@@ -48,7 +66,7 @@ export function NewSessionPicker({
 
 function toSolve(s: TimerSolve) {
   return {
-    timeMs: s.timeMs,
+    timeMs: s.timeMs + (s.penalty > 0 ? 2000 : 0),
     dnf: s.dnf,
     penalty: s.penalty,
     scramble: s.scramble,
@@ -64,7 +82,8 @@ function bestTime(solves: TimerSolve[]): number | null {
 }
 
 function computeSessionStats(solves: TimerSolve[]) {
-  const best = bestTime(solves);
+  const solveList = solves.map(toSolve);
+  const pbs = computePersonalBests(solveList);
   const clean = solves.filter((s) => !s.dnf);
   const times = clean.map((s) => s.timeMs + (s.penalty > 0 ? 2000 : 0));
   const mean = times.length > 0 ? times.reduce((a, b) => a + b, 0) / times.length : null;
@@ -75,17 +94,47 @@ function computeSessionStats(solves: TimerSolve[]) {
       : null;
   const rCv = times.length >= 3 ? madCv(times) : null;
   const iqr = times.length >= 3 ? iqrCv(times) : null;
-  const ao5Arr = rollingAverage(solves.map(toSolve), 5);
-  const ao12Arr = rollingAverage(solves.map(toSolve), 12);
+
+  const mo3Arr = rollingMean(solveList, 3);
+  const ao5Arr = rollingAverage(solveList, 5);
+  const ao12Arr = rollingAverage(solveList, 12);
+  const ao50Arr = rollingAverage(solveList, 50);
+  const ao100Arr = rollingAverage(solveList, 100);
+
+  const lastMo3Ms = mo3Arr.length > 0 ? mo3Arr[mo3Arr.length - 1].ms : null;
+  const currentMo3 = lastMo3Ms !== null && isFinite(lastMo3Ms) ? lastMo3Ms : null;
+
   const lastAo5Ms = ao5Arr.length > 0 ? ao5Arr[ao5Arr.length - 1].ms : null;
   const currentAo5 = lastAo5Ms !== null && isFinite(lastAo5Ms) ? lastAo5Ms : null;
-  const ao5Valid = ao5Arr.filter((a) => isFinite(a.ms));
-  const bestAo5 = ao5Valid.length > 0 ? Math.min(...ao5Valid.map((a) => a.ms)) : null;
+
   const lastAo12Ms = ao12Arr.length > 0 ? ao12Arr[ao12Arr.length - 1].ms : null;
   const currentAo12 = lastAo12Ms !== null && isFinite(lastAo12Ms) ? lastAo12Ms : null;
-  const ao12Valid = ao12Arr.filter((a) => isFinite(a.ms));
-  const bestAo12 = ao12Valid.length > 0 ? Math.min(...ao12Valid.map((a) => a.ms)) : null;
-  return { best, mean, med, stdDev, rCv, iqr, currentAo5, bestAo5, currentAo12, bestAo12 };
+
+  const lastAo50Ms = ao50Arr.length > 0 ? ao50Arr[ao50Arr.length - 1].ms : null;
+  const currentAo50 = lastAo50Ms !== null && isFinite(lastAo50Ms) ? lastAo50Ms : null;
+
+  const lastAo100Ms = ao100Arr.length > 0 ? ao100Arr[ao100Arr.length - 1].ms : null;
+  const currentAo100 = lastAo100Ms !== null && isFinite(lastAo100Ms) ? lastAo100Ms : null;
+
+  return {
+    best: pbs.single,
+    mean,
+    med,
+    stdDev,
+    rCv,
+    iqr,
+    currentMo3,
+    bestMo3: pbs.mo3,
+    currentAo5,
+    bestAo5: pbs.ao5,
+    currentAo12,
+    bestAo12: pbs.ao12,
+    currentAo50,
+    bestAo50: pbs.ao50,
+    currentAo100,
+    bestAo100: pbs.ao100,
+    pbs,
+  };
 }
 
 function SolveList({
@@ -116,7 +165,7 @@ function SolveList({
   const bestSingleMs = useMemo(() => {
     const clean = solves.filter((s) => !s.dnf);
     if (clean.length === 0) return null;
-    return Math.min(...clean.map((s) => s.timeMs));
+    return Math.min(...clean.map((s) => s.timeMs + (s.penalty > 0 ? 2000 : 0)));
   }, [solves]);
 
   const bestAo5Ms = useMemo(() => {
@@ -146,7 +195,8 @@ function SolveList({
           const origIdx = solves.length - 1 - i;
           const ao5 = ao5Map.get(origIdx) ?? null;
           const ao12 = ao12Map.get(origIdx) ?? null;
-          const isBestSingle = bestSingleMs !== null && !solve.dnf && solve.timeMs === bestSingleMs;
+          const solveEffectiveMs = solve.timeMs + (solve.penalty > 0 ? 2000 : 0);
+          const isBestSingle = bestSingleMs !== null && !solve.dnf && solveEffectiveMs === bestSingleMs;
           const isBestAo5 = bestAo5Ms !== null && ao5 !== null && ao5 === bestAo5Ms;
           const isBestAo12 = bestAo12Ms !== null && ao12 !== null && ao12 === bestAo12Ms;
           return (
@@ -156,7 +206,7 @@ function SolveList({
               onClick={() => onSelectSolve(solve)}
             >
               <td className="py-0.5 opacity-30 text-xs">#{solves.length - i}</td>
-              <td className={`py-0.5 text-right font-mono whitespace-nowrap ${isBestSingle ? "text-green-400" : "opacity-60"}`}>
+              <td className={`py-0.5 text-right font-mono whitespace-nowrap ${isBestSingle ? "text-green-400 font-bold" : "opacity-60"}`}>
                 {solve.dnf ? (
                   "DNF"
                 ) : solve.penalty > 0 ? (
@@ -168,10 +218,10 @@ function SolveList({
                   formatTimerTime(solve.timeMs)
                 )}
               </td>
-              <td className={`py-0.5 text-right font-mono text-xs ${isBestAo5 ? "text-blue-400" : "opacity-40"}`}>
+              <td className={`py-0.5 text-right font-mono text-xs ${isBestAo5 ? "text-blue-400 font-bold" : "opacity-40"}`}>
                 {ao5 !== null ? formatTimerTime(ao5) : ""}
               </td>
-              <td className={`py-0.5 text-right font-mono text-xs ${isBestAo12 ? "text-purple-400" : "opacity-40"}`}>
+              <td className={`py-0.5 text-right font-mono text-xs ${isBestAo12 ? "text-purple-400 font-bold" : "opacity-40"}`}>
                 {ao12 !== null ? formatTimerTime(ao12) : ""}
               </td>
             </tr>
@@ -277,8 +327,8 @@ function SessionStats({ solves }: { solves: TimerSolve[] }) {
   return (
     <div className="grid grid-cols-2 gap-x-4 gap-y-2 px-3 py-3 border-b border-[var(--border)]">
       <div className="flex flex-col gap-0.5">
-        <span className="opacity-50 text-center text-xs">Best</span>
-        <span className="font-mono text-base text-center text-green-400">{fmt(stats.best)}</span>
+        <span className="opacity-50 text-center text-xs">Best (PB)</span>
+        <span className="font-mono text-base text-center text-green-400 font-bold">{fmt(stats.best)}</span>
       </div>
       <div className="flex flex-col gap-0.5">
         <span className="opacity-50 text-center text-xs">Mean</span>
@@ -301,21 +351,39 @@ function SessionStats({ solves }: { solves: TimerSolve[] }) {
         <span className="font-mono text-base text-center">{fmtPct(stats.iqr)}</span>
       </div>
       <div className="flex flex-col gap-0.5">
-        <span className="opacity-50 text-center text-xs">Best Ao5</span>
-        <span className="font-mono text-base text-center text-blue-400">{fmt(stats.bestAo5)}</span>
+        <span className="opacity-50 text-center text-xs">Mo3 / Best</span>
+        <span className="font-mono text-base text-center">
+          {fmt(stats.currentMo3)} <span className="text-xs text-amber-400 font-normal">/ {fmt(stats.bestMo3)}</span>
+        </span>
       </div>
       <div className="flex flex-col gap-0.5">
-        <span className="opacity-50 text-center text-xs">Best Ao12</span>
-        <span className="font-mono text-base text-center text-purple-400">{fmt(stats.bestAo12)}</span>
+        <span className="opacity-50 text-center text-xs">Ao5 / Best</span>
+        <span className="font-mono text-base text-center">
+          {fmt(stats.currentAo5)} <span className="text-xs text-blue-400 font-normal">/ {fmt(stats.bestAo5)}</span>
+        </span>
       </div>
       <div className="flex flex-col gap-0.5">
-        <span className="opacity-50 text-center text-xs">Ao5</span>
-        <span className="font-mono text-base text-center">{fmt(stats.currentAo5)}</span>
+        <span className="opacity-50 text-center text-xs">Ao12 / Best</span>
+        <span className="font-mono text-base text-center">
+          {fmt(stats.currentAo12)} <span className="text-xs text-purple-400 font-normal">/ {fmt(stats.bestAo12)}</span>
+        </span>
       </div>
-      <div className="flex flex-col gap-0.5">
-        <span className="opacity-50 text-center text-xs">Ao12</span>
-        <span className="font-mono text-base text-center">{fmt(stats.currentAo12)}</span>
-      </div>
+      {(stats.currentAo50 !== null || stats.bestAo50 !== null) && (
+        <div className="flex flex-col gap-0.5">
+          <span className="opacity-50 text-center text-xs">Ao50 / Best</span>
+          <span className="font-mono text-base text-center">
+            {fmt(stats.currentAo50)} <span className="text-xs text-emerald-400 font-normal">/ {fmt(stats.bestAo50)}</span>
+          </span>
+        </div>
+      )}
+      {(stats.currentAo100 !== null || stats.bestAo100 !== null) && (
+        <div className="flex flex-col gap-0.5">
+          <span className="opacity-50 text-center text-xs">Ao100 / Best</span>
+          <span className="font-mono text-base text-center">
+            {fmt(stats.currentAo100)} <span className="text-xs text-teal-400 font-normal">/ {fmt(stats.bestAo100)}</span>
+          </span>
+        </div>
+      )}
     </div>
   );
 }

@@ -11,12 +11,6 @@ interface ThemeContextValue {
 
 const ThemeContext = createContext<ThemeContextValue | null>(null);
 
-function initTheme(): Theme {
-  if (typeof window === "undefined") return "dark";
-  const stored = readStoredTheme();
-  return stored === "system" ? systemTheme() : stored;
-}
-
 export function useTheme() {
   const ctx = useContext(ThemeContext);
   if (!ctx) throw new Error("useTheme must be used within ThemeProvider");
@@ -24,11 +18,22 @@ export function useTheme() {
 }
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [theme, setTheme] = useState<Theme>(initTheme);
+  const [theme, setTheme] = useState<Theme>("dark");
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    applyTheme(theme);
-  }, [theme]);
+    setMounted(true);
+    const stored = readStoredTheme();
+    const resolved = stored === "system" ? systemTheme() : stored;
+    setTheme(resolved);
+    applyTheme(resolved);
+  }, []);
+
+  useEffect(() => {
+    if (mounted) {
+      applyTheme(theme);
+    }
+  }, [theme, mounted]);
 
   const cycleTheme = useCallback(() => {
     setTheme((t) => nextTheme(t));

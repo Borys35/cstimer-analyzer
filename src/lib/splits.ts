@@ -1,36 +1,55 @@
 import type { Solve } from "./types";
 
-export interface PhaseBreakdown {
-  crossMs: number;
-  f2lMs: number;
-  ollMs: number;
-  pllMs: number;
+export interface PhaseConfig {
+  labels?: string[];
+  referenceShares?: number[];
 }
 
-export const PHASE_KEYS: (keyof PhaseBreakdown)[] = ["crossMs", "f2lMs", "ollMs", "pllMs"];
-
-export const REFERENCE_SHARES: Record<keyof PhaseBreakdown, number> = {
-  crossMs: 0.12,
-  f2lMs: 0.5,
-  ollMs: 0.19,
-  pllMs: 0.19,
+export const DEFAULT_CFOP_CONFIG: PhaseConfig = {
+  labels: ["Cross", "F2L", "OLL", "PLL"],
+  referenceShares: [0.12, 0.5, 0.19, 0.19],
 };
 
-export const PHASE_LABELS: Record<keyof PhaseBreakdown, string> = {
-  crossMs: "Cross",
-  f2lMs: "F2L",
-  ollMs: "OLL",
-  pllMs: "PLL",
+export const DEFAULT_ROUX_CONFIG: PhaseConfig = {
+  labels: ["First Block", "Second Block", "CMLL", "LSE"],
+  referenceShares: [0.18, 0.4, 0.18, 0.24],
 };
 
 export const MIN_SPLIT_SOLVES = 25;
 
-export function extractPhases(solve: Solve): PhaseBreakdown | null {
-  if (solve.dnf || solve.penalty !== 0 || solve.splits.length !== 3) return null;
-  const [m3, m2, m1] = solve.splits;
-  const final = solve.timeMs;
-  if (!(m1 > 0 && m1 < m2 && m2 < m3 && m3 < final)) return null;
-  return { crossMs: m1, f2lMs: m2 - m1, ollMs: m3 - m2, pllMs: final - m3 };
+export interface PhaseBreakdown {
+  phases: { label: string; ms: number }[];
+}
+
+/**
+ * Extracts individual phase durations from cumulative splits in solve.
+ * Splits in csTimer: [m_k, m_{k-1}, ..., m_1] in reverse order before final time.
+ */
+export function extractPhases(solve: Solve, labels?: string[]): PhaseBreakdown | null {
+  if (solve.dnf || solve.penalty !== 0 || !solve.splits || solve.splits.length === 0) return null;
+  const reversed = [...solve.splits].reverse();
+  const milestones = [...reversed, solve.timeMs];
+  for (let i = 0; i < milestones.length - 1; i++) {
+    if (milestones[i] <= 0 || milestones[i] >= milestones[i + 1]) return null;
+  }
+  const durations: number[] = [milestones[0]];
+  for (let i = 1; i < milestones.length; i++) {
+    durations.push(milestones[i] - milestones[i - 1]);
+  }
+  const count = durations.length;
+  const phaseLabels =
+    labels && labels.length === count
+      ? labels
+      : count === 4
+      ? DEFAULT_CFOP_CONFIG.labels!
+      : Array.from({ length: count }, (_, i) => `Phase ${i + 1}`);
+
+  return {
+    phases: durations.map((ms, i) => ({
+      label: phaseLabels[i] || `Phase ${i + 1}`,
+      ms,
+    })),
+  };
 }
 
 function median(values: number[]): number {
@@ -40,30 +59,107 @@ function median(values: number[]): number {
   return sorted.length % 2 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
 }
 
-export interface SplitStats {
-  usableCount: number;
-  /** Median duration share of each phase among usable solves; null shares when insufficient. */
-  shares: Record<keyof PhaseBreakdown, number> | null;
-  /** Phase furthest above its reference share, with the absolute gap in ms at current level. */
-  worst: { phase: keyof PhaseBreakdown; shareGap: number; excessMs: number } | null;
+export interface PhaseStat {
+  phaseIndex: number;
+  label: string;
+  share: number;
+  referenceShare: number;
+  shareGap: number;
+  excessMs: number;
 }
 
-export function analyzeSplits(solves: Solve[], currentLevelMs: number): SplitStats {
-  const phases = solves.map(extractPhases).filter((p): p is PhaseBreakdown => p !== null);
-  if (phases.length < MIN_SPLIT_SOLVES || currentLevelMs <= 0) {
-    return { usableCount: phases.length, shares: null, worst: null };
+export interface SplitStats {
+  usableCount: number;
+  phaseCount: number;
+  labels: string[];
+  shares: Record<string, number> | null;
+  worst: PhaseStat | null;
+}
+
+export function analyzeSplits(
+  solves: Solve[],
+  currentLevelMs: number,
+  config?: PhaseConfig,
+): SplitStats {
+  const parsed = solves
+    .map((s) => extractPhases(s, config?.labels))
+    .filter((p): p is PhaseBreakdown => p !== null);
+
+  if (parsed.length === 0) {
+    return {
+      usableCount: 0,
+      phaseCount: 0,
+      labels: [],
+      shares: null,
+      worst: null,
+    };
   }
-  const shares = {} as Record<keyof PhaseBreakdown, number>;
-  let worst: SplitStats["worst"] = null;
-  for (const key of PHASE_KEYS) {
-    const share = median(
-      phases.map((p) => p[key] / (p.crossMs + p.f2lMs + p.ollMs + p.pllMs)),
-    );
-    shares[key] = share;
-    const gap = share - REFERENCE_SHARES[key];
-    if (!worst || gap > worst.shareGap) {
-      worst = { phase: key, shareGap: gap, excessMs: Math.round(gap * currentLevelMs) };
+
+  // Group by phase count (take the dominant phase count if mixed)
+  const countMap = new Map<number, PhaseBreakdown[]>();
+  for (const p of parsed) {
+    const k = p.phases.length;
+    const arr = countMap.get(k) ?? [];
+    arr.push(p);
+    countMap.set(k, arr);
+  }
+  let dominantCount = 0;
+  let dominantList: PhaseBreakdown[] = [];
+  for (const [k, list] of countMap.entries()) {
+    if (list.length > dominantList.length) {
+      dominantCount = k;
+      dominantList = list;
     }
   }
-  return { usableCount: phases.length, shares, worst };
+
+  const phaseLabels = dominantList[0].phases.map((p) => p.label);
+  const referenceShares =
+    config?.referenceShares && config.referenceShares.length === dominantCount
+      ? config.referenceShares
+      : dominantCount === 4 && (!config?.labels || config.labels[0] === "Cross")
+      ? DEFAULT_CFOP_CONFIG.referenceShares!
+      : Array.from({ length: dominantCount }, () => 1 / dominantCount);
+
+  if (dominantList.length < MIN_SPLIT_SOLVES || currentLevelMs <= 0) {
+    return {
+      usableCount: dominantList.length,
+      phaseCount: dominantCount,
+      labels: phaseLabels,
+      shares: null,
+      worst: null,
+    };
+  }
+
+  const shares: Record<string, number> = {};
+  let worst: PhaseStat | null = null;
+
+  for (let i = 0; i < dominantCount; i++) {
+    const label = phaseLabels[i];
+    const refShare = referenceShares[i];
+    const phaseShares = dominantList.map((p) => {
+      const total = p.phases.reduce((acc, ph) => acc + ph.ms, 0);
+      return total > 0 ? p.phases[i].ms / total : 0;
+    });
+    const share = median(phaseShares);
+    shares[label] = share;
+    const gap = share - refShare;
+    if (!worst || gap > worst.shareGap) {
+      worst = {
+        phaseIndex: i,
+        label,
+        share,
+        referenceShare: refShare,
+        shareGap: gap,
+        excessMs: Math.round(gap * currentLevelMs),
+      };
+    }
+  }
+
+  return {
+    usableCount: dominantList.length,
+    phaseCount: dominantCount,
+    labels: phaseLabels,
+    shares,
+    worst,
+  };
 }

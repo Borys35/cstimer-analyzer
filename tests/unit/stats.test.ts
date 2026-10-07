@@ -9,6 +9,12 @@ import {
   madCv,
   iqrCv,
   LAST_N,
+  rollingAverage,
+  rollingMean,
+  dailyBuckets,
+  weeklyBuckets,
+  improvementScore,
+  computePersonalBests,
 } from "@/lib/stats";
 import type { Solve } from "@/lib/types";
 
@@ -122,5 +128,111 @@ describe("iqrCv", () => {
     const v = iqrCv(times);
     expect(v).not.toBeNull();
     expect(v!).toBeGreaterThan(0);
+  });
+});
+
+describe("rollingAverage & rollingMean", () => {
+  it("rollingAverage does not double count penalty", () => {
+    // 5 solves: 10s, 11s, 12s, 13s, 14s (where 12s has penalty code 2000 already in timeMs)
+    const list = [
+      solve({ timeMs: 10000, penalty: 0 }),
+      solve({ timeMs: 11000, penalty: 0 }),
+      solve({ timeMs: 12000, penalty: 2000 }),
+      solve({ timeMs: 13000, penalty: 0 }),
+      solve({ timeMs: 14000, penalty: 0 }),
+    ];
+    const ao5 = rollingAverage(list, 5);
+    expect(ao5).toHaveLength(1);
+    // trimmed mean drops min (10000) and max (14000), leaving 11000, 12000, 13000 -> mean 12000
+    expect(ao5[0].ms).toBe(12000);
+  });
+
+  it("rollingMean calculates untrimmed mean of N solves and handles DNF", () => {
+    const list = [
+      solve({ timeMs: 10000 }),
+      solve({ timeMs: 12000 }),
+      solve({ timeMs: 14000 }),
+    ];
+    const mo3 = rollingMean(list, 3);
+    expect(mo3).toHaveLength(1);
+    expect(mo3[0].ms).toBe(12000);
+
+    const withDnf = [
+      solve({ timeMs: 10000 }),
+      solve({ timeMs: 12000, dnf: true }),
+      solve({ timeMs: 14000 }),
+    ];
+    const mo3Dnf = rollingMean(withDnf, 3);
+    expect(mo3Dnf[0].ms).toBe(Infinity);
+  });
+});
+
+describe("dailyBuckets and weeklyBuckets DNF exclusion", () => {
+  it("dailyBuckets excludes DNF solves", () => {
+    const solves = [
+      solve({ timeMs: 10000, dnf: false }),
+      solve({ timeMs: 99999, dnf: true }),
+    ];
+    const days = dailyBuckets(solves);
+    expect(days).toHaveLength(1);
+    expect(days[0].meanMs).toBe(10000);
+    expect(days[0].count).toBe(1);
+  });
+
+  it("weeklyBuckets excludes DNF solves", () => {
+    const solves = [
+      solve({ timeMs: 15000, dnf: false }),
+      solve({ timeMs: 99999, dnf: true }),
+    ];
+    const weeks = weeklyBuckets(solves);
+    expect(weeks).toHaveLength(1);
+    expect(weeks[0].meanMs).toBe(15000);
+    expect(weeks[0].count).toBe(1);
+  });
+});
+
+describe("improvementScore level-adaptation", () => {
+  it("scores sub-10 higher for a smaller %/week improvement than sub-60", () => {
+    // 0.15% / week improvement
+    // For 20 days with level 9s vs 50s
+    // slope of -1.928 ms/day over level 9000 ms: (-slope * 7 * 100) / 9000 = 0.15%/week
+    const trendSub10 = {
+      slopeMsPerDay: -(9000 * 0.0015) / 7,
+      interceptMs: 9000,
+      endLevelMs: 8900,
+      weeksCovered: 4,
+    };
+    const scoreSub10 = improvementScore(trendSub10, 9000);
+
+    const trendSub60 = {
+      slopeMsPerDay: -(65000 * 0.0015) / 7,
+      interceptMs: 65000,
+      endLevelMs: 64500,
+      weeksCovered: 4,
+    };
+    const scoreSub60 = improvementScore(trendSub60, 65000);
+
+    expect(scoreSub10).toBe(80);
+    expect(scoreSub60).toBeLessThan(30);
+  });
+});
+
+describe("computePersonalBests", () => {
+  it("computes single, mo3, ao5, ao12, ao50, ao100 PBs", () => {
+    // 60 solves with predictable times
+    const solves = Array.from({ length: 60 }, (_, i) =>
+      solve({ timeMs: 15000 - i * 10, dnf: false }),
+    );
+    // add a DNF
+    solves[5] = solve({ timeMs: 9000, dnf: true });
+
+    const pbs = computePersonalBests(solves);
+    expect(pbs.single).not.toBeNull();
+    expect(pbs.single).toBe(15000 - 59 * 10);
+    expect(pbs.mo3).not.toBeNull();
+    expect(pbs.ao5).not.toBeNull();
+    expect(pbs.ao12).not.toBeNull();
+    expect(pbs.ao50).not.toBeNull();
+    expect(pbs.ao100).toBeNull(); // fewer than 100 solves
   });
 });

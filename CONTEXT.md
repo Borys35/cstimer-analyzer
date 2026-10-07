@@ -4,7 +4,7 @@
 
 - **Session**: A named collection of solves for a specific puzzle type. Has `name`, `puzzleType`, `createdAt`, `endedAt`, and `solves`. Sessions are ordered by `createdAt` descending in the dropdown.
 - **Solve**: A single timed attempt. Has `timeMs` (raw), `penalty` (0 = none, n>0 = +2n seconds), `dnf` (did not finish), `scramble`, `dateSec`. Display time = `timeMs + penalty * 2000`.
-- **Scramble**: A random sequence of moves generated per puzzle type. Stored in the solve record. History is session-scoped; prev/next navigation cycles through all scrambles (used and unused).
+- **Scramble**: A random-state sequence of moves generated per puzzle type via cubing.js (WCA standard). Stored in the solve record. History is session-scoped; prev/next navigation cycles through all scrambles (used and unused).
 
 ## Timer phases
 

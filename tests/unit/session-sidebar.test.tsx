@@ -66,6 +66,11 @@ describe("SessionSidebar", () => {
     expect(screen.getAllByText("Pick puzzle").length).toBeGreaterThanOrEqual(1);
     expect(screen.getAllByText("Pyraminx").length).toBeGreaterThanOrEqual(1);
     expect(screen.getAllByText("Square-1").length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText("4x4").length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText("5x5").length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText("Skewb").length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText("Megaminx").length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText("Clock").length).toBeGreaterThanOrEqual(1);
   });
 
   it("creates new session when puzzle is selected", () => {

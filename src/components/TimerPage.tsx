@@ -14,8 +14,6 @@ export default function TimerPage() {
   const { setPhase: publishPhase } = useTimerPhase();
 
   const puzzleType = activeSession?.puzzleType ?? "3x3";
-  const scrambleLength =
-    settings.scrambleLengths[puzzleType] ?? 20;
 
   const solve = useCallback(
     (data: { timeMs: number; scramble: string; dnf: boolean; penalty: number }) => {
@@ -44,7 +42,6 @@ export default function TimerPage() {
     nextScramble,
   } = useTimer({
     puzzleType,
-    scrambleLength,
     startDelayMs: settings.startDelayMs,
     inspectionEnabled: settings.inspectionEnabled,
     inspectionDurationSec: settings.inspectionDurationSec,
@@ -163,7 +160,10 @@ export default function TimerPage() {
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
           </svg>
         </button>
-        <div className="text-[36px] font-medium opacity-70 text-center whitespace-pre-wrap leading-snug tracking-[0.15em] flex-1">
+        <div
+          suppressHydrationWarning
+          className="text-[36px] font-medium opacity-70 text-center whitespace-pre-wrap leading-snug tracking-[0.15em] flex-1"
+        >
           {scramble}
         </div>
         <button

@@ -45,11 +45,27 @@ export function rollingAverage(solves: Solve[], n: number): { t: number; ms: num
     }
     const times = window
       .filter((s) => !s.dnf)
-      .map((s) => s.timeMs + (s.penalty > 0 ? 2000 : 0));
+      .map((s) => s.timeMs);
     times.sort((a, b) => a - b);
     times.shift();
     times.pop();
     const mean = times.reduce((a, b) => a + b, 0) / times.length;
+    out.push({ t: solves[i].dateSec * 1000, ms: mean });
+  }
+  return out;
+}
+
+export function rollingMean(solves: Solve[], n: number): { t: number; ms: number }[] {
+  const out: { t: number; ms: number }[] = [];
+  for (let i = 0; i < solves.length; i++) {
+    if (i < n - 1) continue;
+    const window = solves.slice(i - n + 1, i + 1);
+    const hasDnf = window.some((s) => s.dnf);
+    if (hasDnf) {
+      out.push({ t: solves[i].dateSec * 1000, ms: Infinity });
+      continue;
+    }
+    const mean = window.reduce((a, b) => a + b.timeMs, 0) / n;
     out.push({ t: solves[i].dateSec * 1000, ms: mean });
   }
   return out;
@@ -64,6 +80,7 @@ export interface DayBucket {
 export function dailyBuckets(solves: Solve[]): DayBucket[] {
   const map = new Map<number, { total: number; count: number }>();
   for (const s of solves) {
+    if (s.dnf) continue;
     const d = new Date(s.dateSec * 1000);
     const key = Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate());
     const e = map.get(key);
@@ -94,6 +111,7 @@ function startOfUTCWeek(ms: number): number {
 export function weeklyBuckets(solves: Solve[]): WeekBucket[] {
   const map = new Map<number, { total: number; count: number }>();
   for (const s of solves) {
+    if (s.dnf) continue;
     const key = startOfUTCWeek(s.dateSec * 1000);
     const e = map.get(key);
     if (e) {
@@ -158,18 +176,75 @@ function piecewise(x: number, anchors: [number, number][]): number {
   return last[1];
 }
 
-export function improvementScore(trend: TrendFit | null, currentLevelMs: number): number | null {
-  if (!trend || trend.weeksCovered < 2 || currentLevelMs <= 0) return null;
-  const pctPerWeek = (-trend.slopeMsPerDay * 7 * 100) / currentLevelMs;
-  return piecewise(pctPerWeek, [
+export type LevelBand = "sub-60" | "sub-40" | "sub-25" | "sub-15" | "sub-10";
+
+export function bandFromMs(ms: number): LevelBand {
+  if (ms >= 60000) return "sub-60";
+  if (ms >= 40000) return "sub-40";
+  if (ms >= 25000) return "sub-25";
+  if (ms >= 15000) return "sub-15";
+  return "sub-10";
+}
+
+export const LEVEL_IMPROVEMENT_ANCHORS: Record<LevelBand, [number, number][]> = {
+  "sub-60": [
+    [-5, 0],
+    [-0.5, 10],
+    [0, 22],
+    [0.5, 35],
+    [1.0, 50],
+    [1.5, 65],
+    [2.0, 80],
+    [3.0, 95],
+  ],
+  "sub-40": [
     [-5, 0],
     [-0.5, 10],
     [0, 22],
     [0.3, 35],
-    [0.7, 60],
-    [1.5, 85],
-    [3, 96],
-  ]);
+    [0.6, 50],
+    [0.9, 65],
+    [1.2, 80],
+    [2.0, 95],
+  ],
+  "sub-25": [
+    [-5, 0],
+    [-0.5, 10],
+    [0, 22],
+    [0.15, 35],
+    [0.3, 50],
+    [0.4, 65],
+    [0.5, 80],
+    [1.0, 95],
+  ],
+  "sub-15": [
+    [-5, 0],
+    [-0.5, 10],
+    [0, 22],
+    [0.07, 35],
+    [0.15, 50],
+    [0.22, 65],
+    [0.30, 80],
+    [0.6, 95],
+  ],
+  "sub-10": [
+    [-5, 0],
+    [-0.5, 10],
+    [0, 22],
+    [0.02, 35],
+    [0.05, 50],
+    [0.10, 65],
+    [0.15, 80],
+    [0.3, 95],
+  ],
+};
+
+export function improvementScore(trend: TrendFit | null, currentLevelMs: number): number | null {
+  if (!trend || trend.weeksCovered < 2 || currentLevelMs <= 0) return null;
+  const pctPerWeek = (-trend.slopeMsPerDay * 7 * 100) / currentLevelMs;
+  const band = bandFromMs(currentLevelMs);
+  const anchors = LEVEL_IMPROVEMENT_ANCHORS[band];
+  return piecewise(pctPerWeek, anchors);
 }
 
 export function median(times: number[]): number | null {
@@ -283,15 +358,6 @@ export interface ScoredAnalysis {
   days: DayBucket[];
 }
 
-export type LevelBand = "sub-60" | "sub-40" | "sub-25" | "sub-15" | "sub-10";
-
-export function bandFromMs(ms: number): LevelBand {
-  if (ms >= 60000) return "sub-60";
-  if (ms >= 40000) return "sub-40";
-  if (ms >= 25000) return "sub-25";
-  if (ms >= 15000) return "sub-15";
-  return "sub-10";
-}
 
 const LEVEL_WEIGHTS: Record<LevelBand, { i: number; c: number; f: number }> = {
   "sub-60": { i: 0.45, c: 0.15, f: 0.40 },
@@ -421,4 +487,32 @@ export function fmtTime(ms: number): string {
     return `${m}:${s.toFixed(2).padStart(5, "0")}`;
   }
   return `${(ms / 1000).toFixed(2)}`;
+}
+
+export interface PersonalBests {
+  single: number | null;
+  mo3: number | null;
+  ao5: number | null;
+  ao12: number | null;
+  ao50: number | null;
+  ao100: number | null;
+}
+
+export function computePersonalBests(solves: Solve[]): PersonalBests {
+  const clean = solves.filter((s) => !s.dnf);
+  const single = clean.length > 0 ? Math.min(...clean.map((s) => s.timeMs)) : null;
+
+  const getBest = (arr: { ms: number }[]) => {
+    const valid = arr.filter((x) => isFinite(x.ms));
+    return valid.length > 0 ? Math.min(...valid.map((x) => x.ms)) : null;
+  };
+
+  return {
+    single,
+    mo3: getBest(rollingMean(solves, 3)),
+    ao5: getBest(rollingAverage(solves, 5)),
+    ao12: getBest(rollingAverage(solves, 12)),
+    ao50: getBest(rollingAverage(solves, 50)),
+    ao100: getBest(rollingAverage(solves, 100)),
+  };
 }

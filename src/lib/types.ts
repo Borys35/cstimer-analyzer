@@ -74,7 +74,6 @@ export interface TimerSettings {
   inspectionDurationSec: number;
   soundEnabled: boolean;
   hideTimer: boolean;
-  scrambleLengths: Record<PuzzleType, number>;
 }
 
 export interface AppData {
@@ -89,20 +88,6 @@ export const DEFAULT_SETTINGS: TimerSettings = {
   inspectionDurationSec: 15,
   soundEnabled: false,
   hideTimer: false,
-  scrambleLengths: {
-    "2x2": 11,
-    "3x3": 20,
-    "4x4": 44,
-    "5x5": 60,
-    "6x6": 80,
-    "7x7": 100,
-    Pyraminx: 8,
-    Megaminx: 11,
-    Skewb: 11,
-    "Square-1": 11,
-    Clock: 13,
-    Unknown: 20,
-  },
 };
 
 export interface StorageAdapter {

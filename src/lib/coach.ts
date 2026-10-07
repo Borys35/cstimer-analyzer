@@ -19,10 +19,10 @@ export interface CoachReport {
 }
 
 const TIER_TITLES: Record<NonNullable<ScoredAnalysis["tier"]>, string> = {
-  good: "GOOD. Do not get comfortable.",
-  decent: "DECENT. That is not a compliment.",
-  bad: "BAD. The numbers do not lie.",
-  horrible: "HORRIBLE. Stop wasting solves.",
+  good: "Good. Stay sharp.",
+  decent: "Decent. Room to push.",
+  bad: "Below par. Time to refocus.",
+  horrible: "Struggling. Let's fix the foundation.",
 };
 
 function improvementText(score: number | null, a: ScoredAnalysis): string {
@@ -43,14 +43,14 @@ function improvementText(score: number | null, a: ScoredAnalysis): string {
 
   if (msPerWeek <= -50) {
     if (rate > 3)
-      return `Improving ${rate.toFixed(1)}%/week (${fmtTime(Math.abs(msPerWeek))}/week). Above 3%/week sustained is beginner territory or a fluke window; expect it to stall. Bank it while it lasts.`;
-    return `You are improving at ${fmtTime(Math.abs(msPerWeek))}/week (~${rate.toFixed(1)}%/week). At your level, ${exp} Keep doing what you are doing and add volume.`;
+      return `Improving ${rate.toFixed(1)}%/week (${fmtTime(Math.abs(msPerWeek))}/week). Strong momentum — maintain this focus as gains naturally stabilize over time.`;
+    return `You are improving at ${fmtTime(Math.abs(msPerWeek))}/week (~${rate.toFixed(1)}%/week). At your level, ${exp} Keep doing what you are doing and maintain volume.`;
   }
   if (msPerWeek < 0)
-    return `Improving, but slowly: ${fmtTime(Math.abs(msPerWeek))}/week. ${exp} Pick up deliberate practice before the curve does it for you.`;
+    return `Improving, but slowly: ${fmtTime(Math.abs(msPerWeek))}/week. ${exp} Structured practice will accelerate your pace.`;
   if (msPerWeek < 50)
-    return `Flat. ${fmtTime(Math.abs(msPerWeek))}/week of drift is noise, not progress. ${exp} Most cubers who quit effectively stopped here — maintaining feels like training but scores like standing still.`;
-  return `Regressing at ${fmtTime(msPerWeek)}/week. You are actively getting worse. Either your practice is mindless or you are tired. Fix the input before complaining about the output.`;
+    return `Flat. ${fmtTime(Math.abs(msPerWeek))}/week of drift is holding steady, but not progressing. ${exp} Switch up your practice drills to kickstart improvement.`;
+  return `Regressing at ${fmtTime(msPerWeek)}/week. Times are drifting upward. Check whether fatigue or rushed turning is creeping in before moving forward.`;
 }
 
 function consistencyText(score: number | null, cv: number | null, levelMs: number | null): string {
@@ -68,12 +68,12 @@ function consistencyText(score: number | null, cv: number | null, levelMs: numbe
   const note = band ? bandNote[band] : "";
 
   if (cv < 0.04)
-    return `CV ${pct}% — implausibly tight for raw singles. Check that your log is real solves, not repeated averages.`;
-  if (score >= 88) return `CV ${pct}% — genuinely tight; measured logs rarely sit below 9% regardless of level. This is top-decile spread. ${note}`;
-  if (score >= 70) return `CV ${pct}% — above par. Community convention calls <10% good; you are close. Your worst solves still cost your averages. ${note}`;
-  if (score >= 55) return `CV ${pct}% — par for measured cubers (8–15%). Par is not praise: every point of spread is seconds leaking into your mo5s and mo12s. ${note}`;
-  if (score >= 40) return `CV ${pct}% — sloppy side of typical. You have fast solves in you and prove it by failing to reproduce them. Lookahead and pause discipline, not more speed. ${note}`;
-  return `CV ${pct}% — chaotic. Your times are a lottery; measured logs almost never look like this without pauses or careless turning. Drill slow, metronomic solves until the spread collapses. ${note}`;
+    return `CV ${pct}% — remarkably tight spread. Verify your log reflects realistic singles.`;
+  if (score >= 88) return `CV ${pct}% — genuinely tight; measured logs rarely sit below 9% regardless of level. This is top-decile consistency. ${note}`;
+  if (score >= 70) return `CV ${pct}% — above average. Community convention calls <10% good; you are close. ${note}`;
+  if (score >= 55) return `CV ${pct}% — typical spread for measured cubers (8–15%). Tighter spread directly drops your rolling averages. ${note}`;
+  if (score >= 40) return `CV ${pct}% — higher variance than average. You have fast singles in you; lookahead and pause discipline will bring the rest up. ${note}`;
+  return `CV ${pct}% — high variance. Large swings usually point to recognition pauses or lockups. Drill slow, steady solves to tighten the spread. ${note}`;
 }
 
 function frequencyText(a: ScoredAnalysis): string {
@@ -89,14 +89,14 @@ function frequencyText(a: ScoredAnalysis): string {
   const note = band ? ` ${freqNote[band]}` : "";
 
   if (activeDays === 0)
-    return "Zero active days in the last 14. You do not currently practice this event. There is nothing to analyze.";
+    return "Zero active days in the last 14. Log some practice sessions to unlock analysis.";
   if (activeDays <= 2)
-    return `${activeDays} active days in 14. This is dabbling, not training. Self-reported improving cubers train about an hour most days.${note}`;
+    return `${activeDays} active days in 14. More regular contact is key to cementing muscle memory.${note}`;
   if (activeDays <= 5)
-    return `${activeDays} active days in 14, ~${solvesPerActiveDay.toFixed(0)} solves per active day. Below the dose where improvement compounds; forum norms put regular improvers at 20–100 solves/day on more days than this.${note}`;
+    return `${activeDays} active days in 14, ~${solvesPerActiveDay.toFixed(0)} solves per active day. A bit below the cadence where improvement compounds; aim for shorter, more frequent sessions.${note}`;
   if (activeDays <= 10)
-    return `${activeDays} active days in 14, ~${solvesPerActiveDay.toFixed(0)} solves/day. Workable, but the difference between decent and good is the days you skipped.${note}`;
-  return `${activeDays} active days in 14, ~${solvesPerActiveDay.toFixed(0)} solves/day. Volume is adequate. If results are still flat, quality is the problem, not quantity — deliberate practice beats raw count.${note}`;
+    return `${activeDays} active days in 14, ~${solvesPerActiveDay.toFixed(0)} solves/day. Solid routine. A couple more consistent days will give extra momentum.${note}`;
+  return `${activeDays} active days in 14, ~${solvesPerActiveDay.toFixed(0)} solves/day. Volume is great. If progress feels slow, deliberate drill practice will yield more than more raw solves.${note}`;
 }
 
 function dataText(): string {
@@ -115,16 +115,16 @@ export function buildCoachReport(input: CoachInput): CoachReport {
   let verdictText: string;
   switch (a.tier) {
     case "good":
-      verdictText = `Headline ${a.headline}/100 on ${puzzleLabel}. Current level ≈ ${level}. You are doing most things right; the remaining points live in details.`;
+      verdictText = `Headline ${a.headline}/100 on ${puzzleLabel}. Current level ≈ ${level}. Strong overall work; focus on fine-tuning the remaining areas.`;
       break;
     case "decent":
-      verdictText = `Headline ${a.headline}/100 on ${puzzleLabel}. Current level ≈ ${level}. Functional but unremarkable — one weak pillar is capping you, and the breakdown below names it.`;
+      verdictText = `Headline ${a.headline}/100 on ${puzzleLabel}. Current level ≈ ${level}. Solid progress — addressing your lowest score will unlock the next tier.`;
       break;
     case "bad":
-      verdictText = `Headline ${a.headline}/100 on ${puzzleLabel}. Current level ≈ ${level}. This is what plateau looks like from the inside. Read the weakest line below and act on it daily.`;
+      verdictText = `Headline ${a.headline}/100 on ${puzzleLabel}. Current level ≈ ${level}. You're hitting a plateau. Focus on the weakest area below to break through.`;
       break;
     case "horrible":
-      verdictText = `Headline ${a.headline}/100 on ${puzzleLabel}. Current level ≈ ${level}. This is not a training program, it is a habit of showing up without intent. Rebuild from the lowest number below.`;
+      verdictText = `Headline ${a.headline}/100 on ${puzzleLabel}. Current level ≈ ${level}. Progress is stalled. Step back and rebuild fundamentals from the lowest score below.`;
       break;
     default:
       verdictText = "Insufficient data for a verdict. Upload more history or widen the range.";
@@ -157,11 +157,11 @@ export function buildCoachReport(input: CoachInput): CoachReport {
   }
 
   let splitHint: string | null = null;
-  if (extras.event === "3x3" && extras.splits.shares == null) {
+  if (extras.splits.shares == null) {
     splitHint =
       extras.splits.usableCount > 0
-        ? `Only ${extras.splits.usableCount} solves carry cross/F2L/OLL/PLL phase marks (need ≥25). Enable cstimer's multi-phase timer and split-specific prescriptions unlock.`
-        : "No solves carry cross/F2L/OLL/PLL phase marks. Enable cstimer's multi-phase timer to unlock split-specific prescriptions.";
+        ? `Only ${extras.splits.usableCount} solves carry phase marks (need ≥25). Enable csTimer's multi-phase timer and split-specific prescriptions unlock.`
+        : "No solves carry phase marks. Enable csTimer's multi-phase timer to unlock split-specific prescriptions.";
   }
 
   const title = a.tier ? TIER_TITLES[a.tier] : "NO VERDICT YET";

@@ -47,13 +47,13 @@ export interface BuildChartRowsInput {
 function computeSessionMean(solves: Solve[]): number | null {
   const clean = solves.filter((s) => !s.dnf);
   if (clean.length === 0) return null;
-  return clean.reduce((a, b) => a + b.timeMs + (b.penalty > 0 ? 2000 : 0), 0) / clean.length;
+  return clean.reduce((a, b) => a + b.timeMs, 0) / clean.length;
 }
 
 function computeSessionStd(solves: Solve[]): number | null {
   const clean = solves.filter((s) => !s.dnf);
   if (clean.length < 2) return null;
-  const times = clean.map((s) => s.timeMs + (s.penalty > 0 ? 2000 : 0));
+  const times = clean.map((s) => s.timeMs);
   const mean = times.reduce((a, b) => a + b, 0) / times.length;
   const variance = times.reduce((a, b) => a + (b - mean) ** 2, 0) / times.length;
   return Math.sqrt(variance);
@@ -62,7 +62,7 @@ function computeSessionStd(solves: Solve[]): number | null {
 function computeSessionCv(solves: Solve[]): number | null {
   const clean = solves.filter((s) => !s.dnf);
   if (clean.length < 3) return null;
-  const times = clean.map((s) => s.timeMs + (s.penalty > 0 ? 2000 : 0));
+  const times = clean.map((s) => s.timeMs);
   return madCv(times);
 }
 
@@ -72,7 +72,7 @@ function computeSessionBestAo(solves: Solve[], n: number): number | null {
   let best = Infinity;
   for (let i = 0; i <= clean.length - n; i++) {
     const window = clean.slice(i, i + n);
-    const times = window.map((s) => s.timeMs + (s.penalty > 0 ? 2000 : 0));
+    const times = window.map((s) => s.timeMs);
     times.sort((a, b) => a - b);
     times.shift();
     times.pop();

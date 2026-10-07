@@ -19,7 +19,7 @@ function evidenceFixture(levelMs: number, cvTimes: number[]) {
   return {
     analysis,
     last50Times: analysis.lastNTimes.length ? analysis.lastNTimes : cvTimes,
-    splits: { usableCount: 0, shares: null, worst: null } as SplitStats,
+    splits: { usableCount: 0, phaseCount: 0, labels: [], shares: null, worst: null } as SplitStats,
     event: "3x3",
   };
 }

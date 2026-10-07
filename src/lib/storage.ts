@@ -18,7 +18,11 @@ export class LocalStorageAdapter implements StorageAdapter {
     try {
       const raw = getStorage()?.getItem(STORAGE_KEY);
       if (!raw) return null;
-      return JSON.parse(raw) as AppData;
+      const data = JSON.parse(raw) as any;
+      if (data?.settings?.scrambleLengths) {
+        delete data.settings.scrambleLengths;
+      }
+      return data as AppData;
     } catch {
       return null;
     }
