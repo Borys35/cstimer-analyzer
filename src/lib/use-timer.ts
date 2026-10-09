@@ -53,6 +53,30 @@ export function useTimer({
     rafRef.current = requestAnimationFrame(tick);
   }, []);
 
+  const nextScramblePromiseRef = useRef<Promise<string> | null>(null);
+
+  const consumeNextScramble = useCallback(() => {
+    const promise = nextScramblePromiseRef.current ?? generateScramble(puzzleType);
+    nextScramblePromiseRef.current = generateScramble(puzzleType);
+
+    promise
+      .then((newScramble) => {
+        setScrambleHistory((prev) => {
+          const next = [...prev, newScramble];
+          setScrambleIndex(next.length - 1);
+          return next;
+        });
+      })
+      .catch(() => {
+        const fallback = generateFallbackScramble(puzzleType);
+        setScrambleHistory((prev) => {
+          const next = [...prev, fallback];
+          setScrambleIndex(next.length - 1);
+          return next;
+        });
+      });
+  }, [puzzleType]);
+
   const startTiming = useCallback(
     (penalty: number) => {
       cancelAnimationFrame(rafRef.current);
@@ -60,9 +84,13 @@ export function useTimer({
       setPhase("running");
       rafRef.current = requestAnimationFrame(tick);
 
+      // Ensure upcoming scramble is prefetching while user solves
+      if (!nextScramblePromiseRef.current) {
+        nextScramblePromiseRef.current = generateScramble(puzzleType);
+      }
+
       const scrambleRef = scrambleHistory[scrambleIndex];
       const onSolveRef = onSolve;
-      const puzzleRef = puzzleType;
 
       const recordAndReset = () => {
         cancelAnimationFrame(rafRef.current);
@@ -72,28 +100,12 @@ export function useTimer({
         setPhase("idle");
         solveInFlightRef.current = false;
         onSolveRef({ timeMs, scramble: scrambleRef, dnf: false, penalty });
-        
-        generateScramble(puzzleRef)
-          .then((newScramble) => {
-            setScrambleHistory((prev) => {
-              const next = [...prev, newScramble];
-              setScrambleIndex(next.length - 1);
-              return next;
-            });
-          })
-          .catch(() => {
-            const fallback = generateFallbackScramble(puzzleRef);
-            setScrambleHistory((prev) => {
-              const next = [...prev, fallback];
-              setScrambleIndex(next.length - 1);
-              return next;
-            });
-          });
+        consumeNextScramble();
       };
 
       stopTimingRef.current = recordAndReset;
     },
-    [tick, onSolve, scrambleHistory, scrambleIndex, puzzleType],
+    [tick, onSolve, scrambleHistory, scrambleIndex, puzzleType, consumeNextScramble],
   );
 
   const stopTimingRef = useRef<() => void>(() => {});
@@ -107,25 +119,9 @@ export function useTimer({
       setPhase("idle");
       solveInFlightRef.current = false;
       onSolve({ timeMs: 0, scramble: scrambleHistory[scrambleIndex], dnf, penalty });
-      
-      generateScramble(puzzleType)
-        .then((newScramble) => {
-          setScrambleHistory((prev) => {
-            const next = [...prev, newScramble];
-            setScrambleIndex(next.length - 1);
-            return next;
-          });
-        })
-        .catch(() => {
-          const fallback = generateFallbackScramble(puzzleType);
-          setScrambleHistory((prev) => {
-            const next = [...prev, fallback];
-            setScrambleIndex(next.length - 1);
-            return next;
-          });
-        });
+      consumeNextScramble();
     },
-    [onSolve, scrambleHistory, scrambleIndex, puzzleType],
+    [onSolve, scrambleHistory, scrambleIndex, consumeNextScramble],
   );
 
   const handleKeyDown = useCallback(() => {
@@ -213,29 +209,11 @@ export function useTimer({
       const initial = generateFallbackScramble(puzzleType);
       setScrambleHistory([initial]);
       setScrambleIndex(0);
+      nextScramblePromiseRef.current = generateScramble(puzzleType);
+    } else if (!nextScramblePromiseRef.current) {
+      nextScramblePromiseRef.current = generateScramble(puzzleType);
     }
-
-    if (!solveInFlightRef.current && phase !== "armed" && phase !== "inspection") {
-      let mounted = true;
-      generateScramble(puzzleType)
-        .then((newScramble) => {
-          if (mounted && newScramble) {
-            setScrambleHistory((prev) => {
-              if (prev.length <= 1) {
-                return [newScramble];
-              }
-              const next = [...prev];
-              next[next.length - 1] = newScramble;
-              return next;
-            });
-          }
-        })
-        .catch(() => {});
-      return () => {
-        mounted = false;
-      };
-    }
-  }, [puzzleType, phase]);
+  }, [puzzleType]);
 
   const prevScramble = useCallback(() => {
     setScrambleIndex((i) => Math.max(0, i - 1));
@@ -243,22 +221,11 @@ export function useTimer({
 
   const nextScramble = useCallback(() => {
     if (scrambleIndex >= scrambleHistory.length - 1) {
-      const fallback = generateFallbackScramble(puzzleType);
-      setScrambleHistory((prev) => [...prev, fallback]);
-      setScrambleIndex((i) => i + 1);
-      generateScramble(puzzleType)
-        .then((newScramble) => {
-          setScrambleHistory((prev) => {
-            const next = [...prev];
-            next[next.length - 1] = newScramble;
-            return next;
-          });
-        })
-        .catch(() => {});
+      consumeNextScramble();
     } else {
       setScrambleIndex((i) => i + 1);
     }
-  }, [scrambleIndex, scrambleHistory.length, puzzleType]);
+  }, [scrambleIndex, scrambleHistory.length, consumeNextScramble]);
 
   return {
     phase,

@@ -157,4 +157,45 @@ describe("useTimer", () => {
       );
     });
   });
+
+  describe("scramble stability", () => {
+    it("generates exactly one new scramble when solve ends and does not replace it", async () => {
+      const opts = createOpts();
+      const { result } = renderHook(() => useTimer(opts));
+
+      const initialScramble = result.current.scramble;
+      expect(initialScramble.length).toBeGreaterThan(0);
+
+      // Start solve
+      act(() => result.current.handleKeyDown());
+      act(() => result.current.handleKeyUp());
+      act(() => vi.advanceTimersByTime(1));
+      expect(result.current.phase).toBe("running");
+
+      // Stop solve
+      act(() => result.current.handleKeyDown());
+      expect(result.current.phase).toBe("idle");
+      expect(opts.onSolve).toHaveBeenCalledTimes(1);
+
+      // Wait for async scramble to resolve
+      await vi.waitFor(() => {
+        expect(result.current.scrambleTotal).toBe(2);
+      });
+
+      const nextScramble = result.current.scramble;
+      expect(nextScramble).not.toBe(initialScramble);
+      expect(result.current.scrambleTotal).toBe(2);
+
+      // Advance time by several seconds (where the bug used to overwrite the scramble)
+      act(() => vi.advanceTimersByTime(5000));
+      await act(async () => {
+        await Promise.resolve();
+      });
+
+      // The scramble must NOT have mutated or changed to a second scramble
+      expect(result.current.scramble).toBe(nextScramble);
+      expect(result.current.scrambleTotal).toBe(2);
+    });
+  });
 });
+
