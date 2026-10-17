@@ -61,7 +61,7 @@ export function useSessionState(adapter: StorageAdapter): SessionContextValue {
     loaded?.activeSessionId ?? "",
   );
   const [settings, setSettings] = useState<TimerSettings>(
-    loaded?.settings ?? DEFAULT_SETTINGS,
+    { ...DEFAULT_SETTINGS, ...loaded?.settings },
   );
   const initRef = useRef(false);
 

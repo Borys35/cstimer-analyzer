@@ -83,6 +83,42 @@ export default function SettingsPage() {
           )}
 
           <SettingRow
+            label="Input mode"
+            description="Use the built-in timer, or type times from an external timer"
+          >
+            <button
+              onClick={() =>
+                updateSettings({
+                  inputMode: settings.inputMode === "typing" ? "timer" : "typing",
+                })
+              }
+              className={`px-3 py-1 rounded text-sm ${
+                settings.inputMode === "typing"
+                  ? "bg-primary/20 text-primary"
+                  : "bg-surface-hover"
+              }`}
+            >
+              {settings.inputMode === "typing" ? "Typing" : "Timer"}
+            </button>
+          </SettingRow>
+
+          <SettingRow
+            label="Zen mode"
+            description="Hide the session sidebar on the timer screen"
+          >
+            <button
+              onClick={() => updateSettings({ zenMode: !settings.zenMode })}
+              className={`px-3 py-1 rounded text-sm ${
+                settings.zenMode
+                  ? "bg-primary/20 text-primary"
+                  : "bg-surface-hover"
+              }`}
+            >
+              {settings.zenMode ? "On" : "Off"}
+            </button>
+          </SettingRow>
+
+          <SettingRow
             label="Sound effects"
             description="Play beeps on start/stop"
           >

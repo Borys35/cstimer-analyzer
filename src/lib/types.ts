@@ -74,7 +74,13 @@ export interface TimerSettings {
   inspectionDurationSec: number;
   soundEnabled: boolean;
   hideTimer: boolean;
+  /** Hide the session sidebar on the timer screen. */
+  zenMode: boolean;
+  /** "timer" = built-in stackmat-style timer; "typing" = enter times from an external timer. */
+  inputMode: InputMode;
 }
+
+export type InputMode = "timer" | "typing";
 
 export interface AppData {
   sessions: TimerSession[];
@@ -88,6 +94,8 @@ export const DEFAULT_SETTINGS: TimerSettings = {
   inspectionDurationSec: 15,
   soundEnabled: false,
   hideTimer: false,
+  zenMode: false,
+  inputMode: "timer",
 };
 
 export interface StorageAdapter {

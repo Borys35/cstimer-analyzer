@@ -66,9 +66,9 @@ Each stat chip in the quick-stats row gets a color via `--chip1` through `--chip
 | Token                | Hex       | Series                       |
 | -------------------- | --------- | ---------------------------- |
 | `--series-raw`       | `#9CA3AF` | Session scatter dots         |
-| `--series-ao5`       | `#38bdf8` | Rolling ao5 line             |
-| `--series-ao12`      | `#818cf8` | Rolling ao12 line            |
-| `--series-ao100`     | `#34d399` | Rolling ao100 line           |
+| `--series-ao5`       | `#38bdf8` | Reserved (unused)            |
+| `--series-ao12`      | `#818cf8` | 5-session rolling avg line   |
+| `--series-ao100`     | `#34d399` | Reserved (unused)            |
 | `--series-trend`     | `#E5A126` | Fitted trend line (amber)    |
 | `--series-proj`      | `#CF4B4B` | Projection dashed line (red) |
 | `--chart-bg`         | `#141920` | Chart plot area background   |
@@ -240,15 +240,22 @@ box-shadow:
 
 Full-height centered layout. Elements stacked vertically:
 
-1. **Scramble**: `text-[36px] font-medium opacity-60 tracking-widest`, max-w-3xl, centered
-2. **Timer display**: `text-9xl font-mono font-bold`, color varies by phase:
+1. **Scramble**: `text-lg sm:text-[28px] md:text-[36px] font-medium opacity-70`, max-w-4xl, centered, wraps (`min-w-0 break-words`)
+2. **Timer display**: `text-7xl sm:text-8xl md:text-9xl font-mono font-bold`, color varies by phase:
    - idle: `var(--text)` (default)
    - armed (hold < threshold): `var(--red)`
    - armed (hold ≥ threshold): `var(--green)`
    - running with blind mode: shows "Solving..." instead of time
-3. **Phase label**: `text-xl opacity-40`
+3. **Phase label**: `text-xl opacity-40` — "Hold to start" on coarse pointers, "Press spacebar to start" otherwise
 4. **Info line**: `text-base opacity-30` (puzzle type · session name)
-5. **Hamburger button**: `absolute top-3 left-3`, mobile only, disabled during solve
+5. **Hamburger button**: `absolute top-3 left-3`, mobile only, disabled during solve, hidden in zen mode
+6. **Toolbar**: `absolute top-3 right-3` — input-mode toggle (timer ↔ typing) and zen toggle; fades out (`opacity-0 pointer-events-none`) while armed/running/inspecting
+
+**Typing mode** (`settings.inputMode === "typing"`) replaces the timer display + phase label with a large `font-mono` text input (`text-6xl sm:text-8xl`, bottom border turns `--amber` on focus, `--red` on parse error). Enter (or the mobile-only Save button) records the time against the current scramble. While typing, digits are masked live by `formatTypedInput` (decimal point and minute colon placed automatically: `1234` shows as `12.34`, `10245` as `1:02.45`); a trailing `+` marks +2 and text with letters (`DNF`) is left raw.
+
+**Zen mode** (`settings.zenMode`) unmounts the session sidebar and hides the hamburger.
+
+**Touch surface** (`.timer-pad`): native non-passive touch listeners. Touches starting on buttons, inputs or `[data-no-timer]` (scramble row, toolbar) never arm. Multi-touch and drift beyond 12px cancel an arm. While running, any touch stops. CSS sets `touch-action: manipulation`, no callout, no tap highlight.
 
 ### Session sidebar
 
@@ -262,7 +269,7 @@ Structure (top to bottom):
 3. **Stats bar**: 2-column × 5-row grid — Best, Mean, Median, Std Dev, rCV (MAD), IQR, Best Ao5, Best Ao12, Ao5, Ao12. Best/Mean/Median and the Ao rows are times; Std Dev is seconds; rCV (MAD) and IQR are percentages. rCV/IQR render only with ≥3 clean solves.
 4. **Solve list**: all solves (scrollable), each with time, +2/DNF/delete buttons
 
-Auto-collapse: sidebar width → 0 during armed/running phases (300ms transition).
+Auto-collapse: sidebar width → 0 during armed/running phases and in zen mode (300ms transition).
 
 ### Navbar
 
@@ -420,7 +427,7 @@ Edit the `GaugeRing` function in `src/components/ScoreboardHero.tsx`. Key values
 
 ### Modify the chart
 
-The chart uses Recharts components in `Dashboard.tsx`. All chart-related CSS tokens are `--chart-*` and `--series-*`. The chart reads colors at runtime via `readChartPalette()`, so changing the CSS variables is all that's needed.
+The chart uses Recharts components in `Dashboard.tsx`. Series are toggled by pill buttons above the plot (Sessions, 5-session avg, Trend + projection, Volume) instead of a Recharts legend; defaults are Sessions + Trend, and the viewer's choice is kept in `localStorage` under `cta-chart-series`. All chart-related CSS tokens are `--chart-*` and `--series-*`. The chart reads colors at runtime via `readChartPalette()`, so changing the CSS variables is all that's needed.
 
 ### Adjust responsive behavior
 

@@ -79,6 +79,34 @@ describe("useTimer", () => {
       act(() => vi.advanceTimersByTime(1));
       expect(result.current.phase).toBe("running");
     });
+
+    it("cancelArm aborts a hold so release does not start the timer", () => {
+      const opts = createOpts({ startDelayMs: 500 });
+      const { result } = renderHook(() => useTimer(opts));
+
+      act(() => result.current.handleKeyDown());
+      act(() => vi.advanceTimersByTime(600));
+      act(() => result.current.cancelArm());
+      expect(result.current.phase).toBe("idle");
+
+      act(() => result.current.handleKeyUp());
+      act(() => vi.advanceTimersByTime(600));
+      expect(result.current.phase).toBe("idle");
+      expect(opts.onSolve).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("typed times", () => {
+    it("submitTyped records the time against the current scramble", () => {
+      const opts = createOpts();
+      const { result } = renderHook(() => useTimer(opts));
+      const scramble = result.current.scramble;
+
+      act(() => result.current.submitTyped({ timeMs: 12340, dnf: false, penalty: 1 }));
+      expect(opts.onSolve).toHaveBeenCalledWith({ timeMs: 12340, dnf: false, penalty: 1, scramble });
+      expect(result.current.displayTime).toBe(12340);
+      expect(result.current.phase).toBe("idle");
+    });
   });
 
   describe("with inspection", () => {
@@ -91,42 +119,82 @@ describe("useTimer", () => {
 
       act(() => result.current.handleKeyDown());
       act(() => result.current.handleKeyUp());
-      act(() => vi.advanceTimersByTime(1));
       expect(result.current.phase).toBe("inspection");
     });
 
-    it("starts timing with +2 penalty when tapped early in inspection", () => {
-      const opts = createOpts({
-        inspectionEnabled: true,
-        inspectionDurationSec: 15,
-      });
-      const { result } = renderHook(() => useTimer(opts));
+    function enterInspection(opts: ReturnType<typeof createOpts>) {
+      const hook = renderHook(() => useTimer(opts));
+      act(() => hook.result.current.handleKeyDown());
+      act(() => hook.result.current.handleKeyUp());
+      expect(hook.result.current.phase).toBe("inspection");
+      expect(hook.result.current.inspecting).toBe(true);
+      return hook;
+    }
+
+    it("starts timing from inspection with space hold+release (no penalty within limit)", () => {
+      const opts = createOpts({ inspectionEnabled: true, inspectionDurationSec: 15 });
+      const { result } = enterInspection(opts);
+
+      act(() => vi.advanceTimersByTime(5000));
+      act(() => result.current.handleKeyDown());
+      expect(result.current.phase).toBe("armed");
+      act(() => result.current.handleKeyUp());
+      expect(result.current.phase).toBe("running");
+      expect(result.current.inspecting).toBe(false);
 
       act(() => result.current.handleKeyDown());
+      expect(opts.onSolve).toHaveBeenCalledWith(
+        expect.objectContaining({ dnf: false, penalty: 0 }),
+      );
+    });
+
+    it("returns to inspection when the hold is released before startDelayMs", () => {
+      const opts = createOpts({ inspectionEnabled: true, inspectionDurationSec: 15, startDelayMs: 500 });
+      const { result } = renderHook(() => useTimer(opts));
+      act(() => result.current.handleKeyDown());
+      act(() => vi.advanceTimersByTime(600));
       act(() => result.current.handleKeyUp());
-      act(() => vi.advanceTimersByTime(1));
       expect(result.current.phase).toBe("inspection");
 
-      act(() => result.current.handleTap());
+      act(() => result.current.handleKeyDown());
+      act(() => vi.advanceTimersByTime(200));
+      act(() => result.current.handleKeyUp());
+      expect(result.current.phase).toBe("inspection");
+
+      act(() => result.current.handleKeyDown());
+      act(() => result.current.cancelArm());
+      expect(result.current.phase).toBe("inspection");
+    });
+
+    it("keeps counting inspection down while armed", () => {
+      const opts = createOpts({ inspectionEnabled: true, inspectionDurationSec: 15 });
+      const { result } = enterInspection(opts);
+
+      act(() => result.current.handleKeyDown());
+      act(() => vi.advanceTimersByTime(3000));
+      expect(result.current.phase).toBe("armed");
+      expect(result.current.displayTime).toBeLessThanOrEqual(12000);
+    });
+
+    it("applies +2 when starting in the 2s grace window after the limit", () => {
+      const opts = createOpts({ inspectionEnabled: true, inspectionDurationSec: 15 });
+      const { result } = enterInspection(opts);
+
+      act(() => vi.advanceTimersByTime(16000));
+      expect(result.current.phase).toBe("inspection");
+      act(() => result.current.handleKeyDown());
+      act(() => result.current.handleKeyUp());
       expect(result.current.phase).toBe("running");
 
       act(() => result.current.handleKeyDown());
       expect(opts.onSolve).toHaveBeenCalledWith(
-        expect.objectContaining({ penalty: 2 }),
+        expect.objectContaining({ dnf: false, penalty: 1 }),
       );
     });
 
-    it("starts timing without penalty when tapped in last 2s of inspection", () => {
-      const opts = createOpts({
-        inspectionEnabled: true,
-        inspectionDurationSec: 15,
-      });
-      const { result } = renderHook(() => useTimer(opts));
-
-      act(() => result.current.handleKeyDown());
-      act(() => result.current.handleKeyUp());
-      act(() => vi.advanceTimersByTime(1));
-      expect(result.current.phase).toBe("inspection");
+    it("handleTap starts from inspection without penalty within the limit", () => {
+      const opts = createOpts({ inspectionEnabled: true, inspectionDurationSec: 15 });
+      const { result } = enterInspection(opts);
 
       act(() => vi.advanceTimersByTime(14000));
       act(() => result.current.handleTap());
@@ -138,20 +206,16 @@ describe("useTimer", () => {
       );
     });
 
-    it("records DNF when inspection expires without solve", () => {
-      const opts = createOpts({
-        inspectionEnabled: true,
-        inspectionDurationSec: 15,
-      });
-      const { result } = renderHook(() => useTimer(opts));
-
-      act(() => result.current.handleKeyDown());
-      act(() => result.current.handleKeyUp());
-      act(() => vi.advanceTimersByTime(1));
-      expect(result.current.phase).toBe("inspection");
+    it("records DNF when inspection runs past the +2 grace window", () => {
+      const opts = createOpts({ inspectionEnabled: true, inspectionDurationSec: 15 });
+      const { result } = enterInspection(opts);
 
       act(() => vi.advanceTimersByTime(16000));
+      expect(opts.onSolve).not.toHaveBeenCalled();
+
+      act(() => vi.advanceTimersByTime(1200));
       expect(result.current.phase).toBe("idle");
+      expect(result.current.inspecting).toBe(false);
       expect(opts.onSolve).toHaveBeenCalledWith(
         expect.objectContaining({ dnf: true }),
       );

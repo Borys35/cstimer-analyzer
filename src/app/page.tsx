@@ -3,10 +3,13 @@
 import TimerPage from "@/components/TimerPage";
 import { SessionSidebar } from "@/components/SessionSidebar";
 import { TimerPhaseProvider, useTimerPhase } from "@/components/TimerPhaseContext";
+import { useSession } from "@/components/SessionProvider";
 
 function TimerLayout() {
   const { phase } = useTimerPhase();
-  const collapsed = phase === "armed" || phase === "running";
+  const { settings } = useSession();
+  const zen = settings.zenMode;
+  const collapsed = zen || phase !== "idle";
 
   return (
     <div className="flex h-full">
@@ -15,7 +18,7 @@ function TimerLayout() {
           collapsed ? "w-0" : "w-0 md:w-64"
         }`}
       >
-        <SessionSidebar />
+        {!zen && <SessionSidebar />}
       </div>
       <div className="flex-1 overflow-hidden">
         <TimerPage />

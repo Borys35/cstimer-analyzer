@@ -11,7 +11,13 @@
 - **idle**: Timer waiting for input.
 - **armed**: Hold in progress, waiting for start delay threshold.
 - **running**: Timer actively counting.
-- **inspection**: WCA-style 15s countdown before solve.
+- **inspection**: WCA-style countdown before the solve (default 15s). Hold-and-release (space or touch, honoring the start delay) starts timing: within the limit = no penalty, within 2s after = +2, later = DNF (recorded automatically when the grace window runs out). Releasing too early returns to inspection.
+
+## Input modes
+
+- **Timer mode**: built-in stackmat-style timer — hold space (or touch-and-hold) past the start delay, release to start, any key/touch to stop.
+- **Typing mode**: the user times on an external timer and types the result. Parsed by `parseTypedTime` (`12.34`, `1:02.45`, bare digits `1234` = 12.34, trailing `+` = +2, `DNF`). Saved against the current scramble, then the scramble advances.
+- **Zen mode**: timer screen without the session sidebar. Independent of input mode.
 
 ## Statistics
 
@@ -27,4 +33,4 @@
 - **SessionSidebar**: Desktop fixed panel, mobile slide-in overlay. Contains dropdown picker, stats bar, solve table.
 - **SolveTable**: `<table>` with columns #, Time, Ao5, Ao12. Click opens SolveDetailModal.
 - **SolveDetailModal**: Shows time, date, scramble, +2/DNF/delete controls. +2 and DNF are mutually exclusive — toggling one clears the other.
-- **TimerPage**: Centered scramble display with prev/next arrows, timer, phase label. The next arrow generates a fresh scramble once the session's history is exhausted.
+- **TimerPage**: Centered scramble display with prev/next arrows, timer (or typed-time input), phase label, and a top-right toolbar for input mode and zen mode. The next arrow generates a fresh scramble once the session's history is exhausted.

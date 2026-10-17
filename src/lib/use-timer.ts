@@ -3,6 +3,9 @@ import type { TimerPhase } from "@/lib/timer-utils";
 import { generateScramble, generateFallbackScramble } from "@/lib/scramble";
 import type { PuzzleType } from "@/lib/types";
 
+/** WCA allows starting up to 2s past the inspection limit, with a +2. */
+const INSPECTION_GRACE_MS = 2000;
+
 export interface UseTimerOptions {
   puzzleType: PuzzleType;
   startDelayMs: number;
@@ -21,6 +24,12 @@ export interface UseTimerReturn {
   handleKeyDown: () => void;
   handleKeyUp: () => void;
   handleTap: () => void;
+  /** True while the WCA inspection countdown runs (including while armed during it). */
+  inspecting: boolean;
+  /** Abort a hold in progress (e.g. the touch turned into a swipe). No-op unless armed. */
+  cancelArm: () => void;
+  /** Record a time entered from an external timer against the current scramble. */
+  submitTyped: (solve: { timeMs: number; dnf: boolean; penalty: number }) => void;
   prevScramble: () => void;
   nextScramble: () => void;
 }
@@ -44,7 +53,8 @@ export function useTimer({
   const delayTimerRef = useRef<ReturnType<typeof setTimeout> | number>(0);
   const inspectionIntervalRef = useRef<ReturnType<typeof setInterval> | number>(0);
   const armedAtRef = useRef(0);
-  const inspectionRemainingRef = useRef(0);
+  const inspectionStartRef = useRef(0);
+  const [inspecting, setInspecting] = useState(false);
   const solveInFlightRef = useRef(false);
 
   const tick = useCallback(() => {
@@ -81,6 +91,7 @@ export function useTimer({
     (penalty: number) => {
       cancelAnimationFrame(rafRef.current);
       startTimeRef.current = performance.now();
+      setDisplayTime(0);
       setPhase("running");
       rafRef.current = requestAnimationFrame(tick);
 
@@ -117,6 +128,7 @@ export function useTimer({
       clearTimeout(delayTimerRef.current);
       setDisplayTime(0);
       setPhase("idle");
+      setInspecting(false);
       solveInFlightRef.current = false;
       onSolve({ timeMs: 0, scramble: scrambleHistory[scrambleIndex], dnf, penalty });
       consumeNextScramble();
@@ -124,8 +136,43 @@ export function useTimer({
     [onSolve, scrambleHistory, scrambleIndex, consumeNextScramble],
   );
 
+  // The inspection interval outlives renders; always call the latest recordSolve.
+  const recordSolveRef = useRef(recordSolve);
+  recordSolveRef.current = recordSolve;
+
+  const inspectionLimitMs = inspectionDurationSec * 1000;
+
+  const startInspection = useCallback(() => {
+    clearInterval(inspectionIntervalRef.current);
+    inspectionStartRef.current = performance.now();
+    solveInFlightRef.current = true;
+    setInspecting(true);
+    setPhase("inspection");
+    setDisplayTime(inspectionLimitMs);
+
+    inspectionIntervalRef.current = setInterval(() => {
+      const elapsed = performance.now() - inspectionStartRef.current;
+      setDisplayTime(inspectionLimitMs - elapsed);
+      if (elapsed >= inspectionLimitMs + INSPECTION_GRACE_MS) {
+        recordSolveRef.current(true, 0);
+      }
+    }, 100);
+  }, [inspectionLimitMs]);
+
+  /** WCA A3a: start within the limit = clean, within +2s grace = +2, later = DNF. */
+  const startFromInspection = useCallback(() => {
+    clearInterval(inspectionIntervalRef.current);
+    const elapsed = performance.now() - inspectionStartRef.current;
+    if (elapsed >= inspectionLimitMs + INSPECTION_GRACE_MS) {
+      recordSolve(true, 0);
+      return;
+    }
+    setInspecting(false);
+    startTiming(elapsed > inspectionLimitMs ? 1 : 0);
+  }, [inspectionLimitMs, recordSolve, startTiming]);
+
   const handleKeyDown = useCallback(() => {
-    if (phase === "idle") {
+    if (phase === "idle" || phase === "inspection") {
       setPhase("armed");
       armedAtRef.current = performance.now();
     } else if (phase === "running") {
@@ -134,65 +181,50 @@ export function useTimer({
   }, [phase]);
 
   const handleKeyUp = useCallback(() => {
-    if (phase === "armed") {
-      const held = performance.now() - armedAtRef.current;
-      if (held < startDelayMs) {
-        setPhase("idle");
-        return;
-      }
-      const remaining = Math.max(0, startDelayMs - held);
-      solveInFlightRef.current = true;
-
-      if (inspectionEnabled) {
-        delayTimerRef.current = setTimeout(() => {
-          setPhase("inspection");
-          inspectionRemainingRef.current = inspectionDurationSec;
-          setDisplayTime(inspectionDurationSec * 1000);
-
-          inspectionIntervalRef.current = setInterval(() => {
-            inspectionRemainingRef.current -= 1;
-            setDisplayTime(inspectionRemainingRef.current * 1000);
-            if (inspectionRemainingRef.current <= 0) {
-              clearInterval(inspectionIntervalRef.current);
-              recordSolve(true, 0);
-            }
-          }, 1000);
-        }, remaining);
-        setPhase("idle");
-      } else {
-        delayTimerRef.current = setTimeout(startTiming, remaining);
-        setPhase("idle");
-      }
+    if (phase !== "armed") return;
+    const held = performance.now() - armedAtRef.current;
+    if (held < startDelayMs) {
+      // Released too early: fall back to wherever the hold started from.
+      setPhase(inspecting ? "inspection" : "idle");
+      return;
     }
-  }, [phase, startDelayMs, inspectionEnabled, inspectionDurationSec, startTiming, recordSolve]);
+    if (inspecting) {
+      startFromInspection();
+    } else if (inspectionEnabled) {
+      startInspection();
+    } else {
+      solveInFlightRef.current = true;
+      startTiming(0);
+    }
+  }, [phase, startDelayMs, inspecting, inspectionEnabled, startInspection, startFromInspection, startTiming]);
 
   const handleTap = useCallback(() => {
     if (phase === "idle") {
       if (inspectionEnabled) {
-        setPhase("inspection");
-        inspectionRemainingRef.current = inspectionDurationSec;
-        setDisplayTime(inspectionDurationSec * 1000);
-
-        inspectionIntervalRef.current = setInterval(() => {
-          inspectionRemainingRef.current -= 1;
-          setDisplayTime(inspectionRemainingRef.current * 1000);
-          if (inspectionRemainingRef.current <= 0) {
-            clearInterval(inspectionIntervalRef.current);
-            recordSolve(true, 0);
-          }
-        }, 1000);
+        startInspection();
       } else {
         startTiming(0);
       }
     } else if (phase === "inspection") {
-      clearInterval(inspectionIntervalRef.current);
-      const remaining = inspectionRemainingRef.current;
-      const penalty = remaining > 2 ? 2 : 0;
-      startTiming(penalty);
+      startFromInspection();
     } else if (phase === "running") {
       stopTimingRef.current();
     }
-  }, [phase, inspectionEnabled, inspectionDurationSec, startTiming, recordSolve]);
+  }, [phase, inspectionEnabled, startInspection, startFromInspection, startTiming]);
+
+  const cancelArm = useCallback(() => {
+    if (phase === "armed") setPhase(inspecting ? "inspection" : "idle");
+  }, [phase, inspecting]);
+
+  const submitTyped = useCallback(
+    (solve: { timeMs: number; dnf: boolean; penalty: number }) => {
+      if (phase !== "idle") return;
+      setDisplayTime(solve.timeMs);
+      onSolve({ ...solve, scramble: scrambleHistory[scrambleIndex] });
+      consumeNextScramble();
+    },
+    [phase, onSolve, scrambleHistory, scrambleIndex, consumeNextScramble],
+  );
 
   useEffect(() => {
     return () => {
@@ -237,6 +269,9 @@ export function useTimer({
     handleKeyDown,
     handleKeyUp,
     handleTap,
+    inspecting,
+    cancelArm,
+    submitTyped,
     prevScramble,
     nextScramble,
   };
