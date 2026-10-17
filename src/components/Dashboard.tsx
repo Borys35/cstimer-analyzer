@@ -5,7 +5,6 @@ import {
   Bar,
   CartesianGrid,
   ComposedChart,
-  Legend,
   Line,
   ResponsiveContainer,
   Scatter,
@@ -27,6 +26,7 @@ import {
   readChartPalette,
   type ChartPalette,
 } from "@/lib/theme";
+import { ROLLING_WINDOW } from "@/lib/chartData";
 import ScoreboardHero from "@/components/ScoreboardHero";
 import AnalyticsViews from "@/components/AnalyticsViews";
 
@@ -198,6 +198,30 @@ function SessionTooltip(props: {
   );
 }
 
+type SeriesKey = "sessions" | "rolling" | "trend" | "volume";
+
+const SERIES_STORAGE_KEY = "cta-chart-series";
+const DEFAULT_SERIES: Record<SeriesKey, boolean> = {
+  sessions: true,
+  rolling: false,
+  trend: true,
+  volume: false,
+};
+
+function loadSeries(): Record<SeriesKey, boolean> {
+  try {
+    const raw = localStorage.getItem(SERIES_STORAGE_KEY);
+    if (raw) return { ...DEFAULT_SERIES, ...JSON.parse(raw) };
+  } catch {}
+  return DEFAULT_SERIES;
+}
+
+function saveSeries(series: Record<SeriesKey, boolean>) {
+  try {
+    localStorage.setItem(SERIES_STORAGE_KEY, JSON.stringify(series));
+  } catch {}
+}
+
 function fmtDay(ms: number): string {
   return new Intl.DateTimeFormat("en-GB", { day: "2-digit", month: "short", timeZone: "UTC" }).format(ms);
 }
@@ -210,6 +234,7 @@ export default function Dashboard() {
   const [bucket, setBucket] = useState<BucketMode>("week");
   const [horizon, setHorizon] = useState(4);
   const [palette, setPalette] = useState<ChartPalette | null>(null);
+  const [series, setSeries] = useState<Record<SeriesKey, boolean>>(DEFAULT_SERIES);
 
   const data: ParseResult | null = useMemo(() => {
     if (sessions.length === 0) return null;
@@ -218,7 +243,16 @@ export default function Dashboard() {
 
   useEffect(() => {
     setPalette(readChartPalette());
+    setSeries(loadSeries());
   }, []);
+
+  const toggleSeries = (key: SeriesKey) => {
+    setSeries((prev) => {
+      const next = { ...prev, [key]: !prev[key] };
+      saveSeries(next);
+      return next;
+    });
+  };
 
   const effectiveType = useCallback(
     (s: ParsedSession): PuzzleType => effectiveTypeOf(s, overrides),
@@ -340,49 +374,85 @@ export default function Dashboard() {
       <section className="card mb-5 overflow-hidden p-0">
         <div className="p-4">
           {palette && (
-            <ResponsiveContainer width="100%" height={380}>
-              <ComposedChart data={d.chartRows} margin={{ top: 8, right: 8, bottom: 8, left: 8 }}>
-                <CartesianGrid stroke={palette.grid} />
-                <XAxis
-                  dataKey="t"
-                  type="number"
-                  scale="time"
-                  domain={["dataMin", "dataMax"]}
-                  tickFormatter={fmtDay}
-                  stroke={palette.tick}
-                  fontSize={11}
-                />
-                <YAxis
-                  yAxisId="time"
-                  domain={["auto", "auto"]}
-                  tickFormatter={(ms: number) => fmtTime(ms)}
-                  stroke={palette.tick}
-                  fontSize={11}
-                  width={64}
-                />
-                <YAxis yAxisId="vol" orientation="right" stroke={palette.volume} fontSize={11} width={32} />
-                <Tooltip
-                  content={<SessionTooltip palette={palette} />}
-                />
-                <Legend wrapperStyle={{ fontSize: 12, color: palette.tick }} />
-                <Bar yAxisId="vol" dataKey="vol" name="Solves" fill={palette.volume} opacity={0.5} barSize={14} />
-                <Scatter yAxisId="time" dataKey="sessionMean" name="Session" fill={palette.raw} shape={(props: any) => sessionDot({ ...props, palette })} />
-                <Line yAxisId="time" type="linear" dataKey="ao5" name="ao5 (sessions)" stroke={palette.ao5} dot={false} strokeWidth={1} />
-                <Line yAxisId="time" type="linear" dataKey="ao12" name="ao12 (sessions)" stroke={palette.ao12} dot={false} strokeWidth={1.5} />
-                <Line yAxisId="time" type="linear" dataKey="ao100" name="ao100 (sessions)" stroke={palette.ao100} dot={false} strokeWidth={2.5} />
-                <Line yAxisId="time" type="linear" dataKey="trend" name="Trend" stroke={palette.trend} dot={false} strokeWidth={2} />
-                <Line
-                  yAxisId="time"
-                  type="linear"
-                  dataKey="proj"
-                  name="Projection"
-                  stroke={palette.proj}
-                  strokeDasharray="6 4"
-                  dot={false}
-                  strokeWidth={2}
-                />
-              </ComposedChart>
-            </ResponsiveContainer>
+            <>
+              <div className="mb-3 flex flex-wrap items-center gap-1.5" role="group" aria-label="Chart series">
+                {(
+                  [
+                    { key: "sessions", label: "Sessions", color: "var(--cube-green)" },
+                    { key: "rolling", label: `${ROLLING_WINDOW}-session avg`, color: palette.ao12 },
+                    { key: "trend", label: "Trend + projection", color: palette.trend },
+                    { key: "volume", label: "Volume", color: palette.tick },
+                  ] as const
+                ).map((s) => (
+                  <button
+                    key={s.key}
+                    type="button"
+                    aria-pressed={series[s.key]}
+                    onClick={() => toggleSeries(s.key)}
+                    className={`flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] transition-colors ${
+                      series[s.key]
+                        ? "border-[var(--border)] bg-[var(--surface-2)] text-[var(--text)]"
+                        : "border-transparent text-[var(--text-faint)] hover:text-[var(--text-dim)]"
+                    }`}
+                  >
+                    <span
+                      className="inline-block h-2 w-2 rounded-full"
+                      style={{ background: s.color, opacity: series[s.key] ? 1 : 0.35 }}
+                    />
+                    {s.label}
+                  </button>
+                ))}
+              </div>
+              <ResponsiveContainer width="100%" height={360}>
+                <ComposedChart data={d.chartRows} margin={{ top: 8, right: 8, bottom: 8, left: 8 }}>
+                  <CartesianGrid stroke={palette.grid} vertical={false} />
+                  <XAxis
+                    dataKey="t"
+                    type="number"
+                    scale="time"
+                    domain={["dataMin", "dataMax"]}
+                    tickFormatter={fmtDay}
+                    stroke={palette.tick}
+                    fontSize={11}
+                  />
+                  <YAxis
+                    yAxisId="time"
+                    domain={["auto", "auto"]}
+                    tickFormatter={(ms: number) => fmtTime(ms)}
+                    stroke={palette.tick}
+                    fontSize={11}
+                    width={64}
+                  />
+                  <YAxis yAxisId="vol" orientation="right" stroke={palette.volume} fontSize={11} width={32} hide={!series.volume} />
+                  <Tooltip content={<SessionTooltip palette={palette} />} />
+                  {series.volume && (
+                    <Bar yAxisId="vol" dataKey="vol" name="Solves" fill={palette.volume} opacity={0.5} barSize={14} />
+                  )}
+                  {series.sessions && (
+                    <Scatter yAxisId="time" dataKey="sessionMean" name="Session" fill={palette.raw} shape={(props: any) => sessionDot({ ...props, palette })} />
+                  )}
+                  {series.rolling && (
+                    <Line yAxisId="time" type="monotone" dataKey="rolling" name={`${ROLLING_WINDOW}-session avg`} stroke={palette.ao12} dot={false} strokeWidth={2} connectNulls />
+                  )}
+                  {series.trend && (
+                    <Line yAxisId="time" type="linear" dataKey="trend" name="Trend" stroke={palette.trend} dot={false} strokeWidth={2} connectNulls />
+                  )}
+                  {series.trend && (
+                    <Line
+                      yAxisId="time"
+                      type="linear"
+                      dataKey="proj"
+                      name="Projection"
+                      stroke={palette.proj}
+                      strokeDasharray="6 4"
+                      dot={false}
+                      strokeWidth={2}
+                      connectNulls
+                    />
+                  )}
+                </ComposedChart>
+              </ResponsiveContainer>
+            </>
           )}
           <p className="mt-1 text-center text-[11px] text-[var(--text-faint)]">
             each dot is a session - bigger = more solves, greener = more consistent

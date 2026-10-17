@@ -25,13 +25,14 @@ export interface ChartRow {
   sessionIsPbSingle?: boolean;
   sessionRank?: number;
   sessionDeltaPct?: number;
-  ao5?: number;
-  ao12?: number;
-  ao100?: number;
+  /** Rolling trimmed average of the last ROLLING_WINDOW session means. */
+  rolling?: number;
   trend?: number;
   proj?: number;
   vol?: number;
 }
+
+export const ROLLING_WINDOW = 5;
 
 export interface BuildChartRowsInput {
   kept: Solve[];
@@ -156,7 +157,8 @@ export function buildChartRows(input: BuildChartRowsInput): ChartRow[] {
       overallMean > 0 ? ((sr.mean - overallMean) / overallMean) * 100 : undefined;
   }
 
-  const sessionMeans = sessionRows.map((r) => ({
+  // Rolling average must walk sessions chronologically; sessionRows is sorted by mean above.
+  const sessionMeans = chrono.map((r) => ({
     dateSec: r.t / 1000,
     timeMs: r.mean,
     dnf: false,
@@ -164,13 +166,9 @@ export function buildChartRows(input: BuildChartRowsInput): ChartRow[] {
     scramble: "",
     splits: [],
   }));
-  const ao5 = rollingAverage(sessionMeans, 5);
-  const ao12 = rollingAverage(sessionMeans, 12);
-  const ao100 = rollingAverage(sessionMeans, 100);
-
-  for (const p of ao5) if (isFinite(p.ms)) rowAt(p.t).ao5 = p.ms;
-  for (const p of ao12) if (isFinite(p.ms)) rowAt(p.t).ao12 = p.ms;
-  for (const p of ao100) if (isFinite(p.ms)) rowAt(p.t).ao100 = p.ms;
+  for (const p of rollingAverage(sessionMeans, ROLLING_WINDOW)) {
+    if (isFinite(p.ms)) rowAt(p.t).rolling = p.ms;
+  }
 
   const volBuckets = (
     bucket === "day" ? dailyBuckets(clean) : weeklyBuckets(clean)
