@@ -283,6 +283,8 @@ Brand logo (`Navbar.tsx`):
 
 Logo hover eyes: two `.logo-eye-overlay` spans sit over the cube's eyes inside the link. Mobile placement `left-[45%]` / `left-[65%]`, `top-[29%]`, `w-[9%] h-[39%]`; desktop `md:left-[12%]` / `md:left-[17%]`, `md:top-[34%]`, `md:w-[2.3%] md:h-[29%]`. Rounded dark squares, `pointer-events: none`, `opacity` transition 0.2s. `.logo-hover:hover .logo-eye-overlay { opacity: 0 }` hides the eyes on hover.
 
+Favicon: `src/app/icon.svg` is `public/logo.svg` (the cube mark) with a square `viewBox="0 -6 68 68"` so it centers in browser tabs; Next.js links it automatically. `src/app/apple-icon.tsx` renders the same SVG at 132px on a 180×180 `#0B0E11` tile as the PNG iOS home-screen icon (iOS doesn't accept SVG there). Change the logo in both `public/logo.svg` and `src/app/icon.svg`.
+
 ---
 
 ## Layout
@@ -441,6 +443,8 @@ The `.score-hero` layout is the only component using custom CSS for responsive b
 | -------------------------------------- | ------------------------------------------------------------------ |
 | `src/app/globals.css`                  | All color tokens, typography imports, component styles, animations |
 | `src/app/layout.tsx`                   | HTML structure, no-flash theme script, metadata, providers         |
+| `src/app/icon.svg`                     | Favicon (square copy of `public/logo.svg`)                         |
+| `src/app/apple-icon.tsx`               | 180×180 PNG home-screen icon rendered from `icon.svg` at build     |
 | `src/app/page.tsx`                     | Timer page layout — sidebar + timer, auto-collapse logic           |
 | `src/lib/theme.ts`                     | Theme type, localStorage persistence, chart palette reader         |
 | `src/lib/use-timer.ts`                 | Timer phase machine, scramble generation, keyboard/touch handlers  |
