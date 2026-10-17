@@ -3,6 +3,7 @@ import { Analytics } from "@vercel/analytics/react";
 import "./globals.css";
 import { STORAGE_KEY, THEMES } from "@/lib/theme";
 import { SessionProvider } from "@/components/SessionProvider";
+import { AuthProvider } from "@/components/AuthProvider";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { MenuProvider } from "@/components/MenuContext";
 import { Navbar } from "@/components/Navbar";
@@ -30,12 +31,14 @@ export default function RootLayout({
       <body className="h-full flex flex-col antialiased">
         <MenuProvider>
           <ThemeProvider>
-            <SessionProvider>
-              <Navbar />
-              <div className="flex-1 overflow-auto">
-                {children}
-              </div>
-            </SessionProvider>
+            <AuthProvider>
+              <SessionProvider>
+                <Navbar />
+                <div className="flex-1 overflow-auto">
+                  {children}
+                </div>
+              </SessionProvider>
+            </AuthProvider>
           </ThemeProvider>
         </MenuProvider>
         <Analytics />

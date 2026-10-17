@@ -3,6 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import ThemeToggle from "@/components/ThemeToggle";
+import { AccountMenu } from "@/components/AccountMenu";
 import { useTheme } from "@/components/ThemeProvider";
 
 export function Navbar() {
@@ -35,7 +36,7 @@ export function Navbar() {
           <span className="logo-eye-overlay left-[65%] top-[29%] w-[9%] h-[39%] md:left-[17%] md:top-[34%] md:w-[2.3%] md:h-[29%]" />
         </Link>
       </div>
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-3 sm:gap-4">
         <Link href="/" className="opacity-60 hover:opacity-100">
           Timer
         </Link>
@@ -46,6 +47,7 @@ export function Navbar() {
           Settings
         </Link>
         <ThemeToggle />
+        <AccountMenu />
       </div>
     </nav>
   );

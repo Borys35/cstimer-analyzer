@@ -19,14 +19,21 @@ export interface SessionContextValue {
   updateSettings: (patch: Partial<TimerSettings>) => void;
   importSessions: (text: string) => { imported: number; duplicates: number };
   clearAllSessions: () => void;
+  /** Append sessions not already present (by id), e.g. local sessions moved to the cloud. */
+  mergeSessions: (incoming: TimerSession[], activeId?: string) => void;
+  /** False until an async (cloud) adapter has delivered its first data. */
+  hydrated: boolean;
 }
+
+/** Re-pull from the cloud at most this often when the tab regains focus. */
+const REFRESH_INTERVAL_MS = 30_000;
 
 let idCounter = 0;
 function uid(): string {
   return `id-${Date.now()}-${++idCounter}`;
 }
 
-function generateSessionName(existing: TimerSession[]): string {
+export function generateSessionName(existing: TimerSession[]): string {
   const now = new Date();
   const dd = String(now.getDate()).padStart(2, "0");
   const mm = String(now.getMonth() + 1).padStart(2, "0");
@@ -53,7 +60,8 @@ function createDefaultSession(): TimerSession {
 }
 
 export function useSessionState(adapter: StorageAdapter): SessionContextValue {
-  const loaded = adapter.load();
+  const [loaded] = useState(() => adapter.load());
+  const [hydrated, setHydrated] = useState(!adapter.hydrate);
   const [sessions, setSessions] = useState<TimerSession[]>(
     loaded?.sessions ?? [],
   );
@@ -72,16 +80,53 @@ export function useSessionState(adapter: StorageAdapter): SessionContextValue {
     setActiveSessionId(defaultSession.id);
   }, []);
 
-  // Initialize default session on first mount if empty
+  // Pull from an async source (cloud), then on tab focus. The adapter returns
+  // null when it can't or shouldn't replace local state.
+  const pull = useCallback(async () => {
+    const data = await adapter.hydrate?.();
+    if (!data) return;
+    setSessions(data.sessions);
+    setActiveSessionId((current) =>
+      data.sessions.some((s) => s.id === current)
+        ? current
+        : data.activeSessionId || (data.sessions[data.sessions.length - 1]?.id ?? ""),
+    );
+  }, [adapter]);
+
   useEffect(() => {
-    if (initRef.current) return;
+    if (!adapter.hydrate) return;
+    let cancelled = false;
+    let lastPull = Date.now();
+    void pull().finally(() => {
+      if (!cancelled) setHydrated(true);
+    });
+
+    const refresh = () => {
+      if (document.visibilityState !== "visible") return;
+      if (Date.now() - lastPull < REFRESH_INTERVAL_MS) return;
+      lastPull = Date.now();
+      void pull();
+    };
+    document.addEventListener("visibilitychange", refresh);
+    window.addEventListener("online", refresh);
+    return () => {
+      cancelled = true;
+      document.removeEventListener("visibilitychange", refresh);
+      window.removeEventListener("online", refresh);
+    };
+  }, [adapter, pull]);
+
+  // Initialize default session once data is in, if empty. Waiting for the
+  // cloud matters: otherwise every new device would upload an empty session.
+  useEffect(() => {
+    if (!hydrated || initRef.current) return;
     initRef.current = true;
     if (sessions.length === 0) {
       initDefaultSession();
     } else if (!sessions.find((s) => s.id === activeSessionId)) {
       setActiveSessionId(sessions[0].id);
     }
-  }, [sessions, activeSessionId, initDefaultSession]);
+  }, [hydrated, sessions, activeSessionId, initDefaultSession]);
 
   // Auto-save on every state change (skip first render since initial state comes from adapter)
   const initialSaveSkipped = useRef(false);
@@ -224,6 +269,21 @@ export function useSessionState(adapter: StorageAdapter): SessionContextValue {
     initDefaultSession();
   }, [initDefaultSession]);
 
+  const mergeSessions = useCallback((incoming: TimerSession[], activeId?: string) => {
+    setSessions((prev) => {
+      const have = new Set(prev.map((s) => s.id));
+      const added = incoming.filter((s) => !have.has(s.id));
+      if (!added.length) return prev;
+      // A brand-new account holds just the auto-created empty session; drop it
+      // rather than leave a stray placeholder next to the real ones.
+      const base = prev.length === 1 && prev[0].solves.length === 0 ? [] : prev;
+      return [...base, ...added];
+    });
+    // Carry on in the merged (local) session; this also covers the dropped placeholder.
+    const nextActive = activeId ?? incoming[incoming.length - 1]?.id;
+    if (nextActive) setActiveSessionId(nextActive);
+  }, []);
+
   return {
     sessions,
     activeSession,
@@ -240,5 +300,7 @@ export function useSessionState(adapter: StorageAdapter): SessionContextValue {
     updateSettings,
     importSessions,
     clearAllSessions,
+    mergeSessions,
+    hydrated,
   };
 }

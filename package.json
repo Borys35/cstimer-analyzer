@@ -19,6 +19,8 @@
     "node": ">=22"
   },
   "dependencies": {
+    "@supabase/ssr": "^0.12.7",
+    "@supabase/supabase-js": "2.117.3",
     "@vercel/analytics": "^2.0.1",
     "cubing": "^0.63.8",
     "next": "^15.4.0",

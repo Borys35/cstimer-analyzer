@@ -105,4 +105,10 @@ export interface StorageAdapter {
   updateSession(session: TimerSession): void;
   getActiveSession(): TimerSession | null;
   setActiveSession(sessionId: string): void;
+  /**
+   * Optional async source of truth (cloud). Resolves fresh data to replace the
+   * state loaded synchronously by load(), or null to keep what's there
+   * (offline, or local edits happened while fetching).
+   */
+  hydrate?(): Promise<AppData | null>;
 }

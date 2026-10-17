@@ -7,3 +7,8 @@ next-env.d.ts
 cstimer_*.txt
 test-results/
 public/cubing/
+
+# Local env (secrets)
+.env
+.env.local
+.env*.local
