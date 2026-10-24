@@ -47,7 +47,7 @@ export function NewSessionPicker({
                 onSelect(puzzle);
                 onClose();
               }}
-              className="px-3 py-2.5 rounded-md bg-[var(--surface)] border border-[var(--border)] hover:bg-[var(--surface-3)] hover:border-[var(--amber)] transition-colors text-sm font-medium text-center"
+              className="min-w-0 break-words px-2 py-2.5 rounded-md bg-[var(--surface)] border border-[var(--border)] hover:bg-[var(--surface-3)] hover:border-[var(--amber)] transition-colors text-sm font-medium text-center"
             >
               {puzzle}
             </button>
@@ -593,7 +593,13 @@ export function SessionSidebar() {
           <div className="text-sm opacity-40 text-center py-8">No session selected</div>
         )}
       </div>
+    </div>
+  );
 
+  return (
+    <>
+      {/* Rendered outside the panels: the mobile slide-in's transform would
+          make it the containing block for these fixed overlays and clip them. */}
       {showPicker && (
         <NewSessionPicker
           onSelect={(puzzle) => createSession(puzzle)}
@@ -618,11 +624,7 @@ export function SessionSidebar() {
           action={toast.onUndo ? { label: "Undo", onClick: toast.onUndo } : undefined}
         />
       )}
-    </div>
-  );
 
-  return (
-    <>
       {/* Mobile overlay */}
       {mobileOpen && (
         <div

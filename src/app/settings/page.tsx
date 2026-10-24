@@ -153,6 +153,24 @@ export default function SettingsPage() {
               {settings.hideTimer ? "On" : "Off"}
             </button>
           </SettingRow>
+
+          <SettingRow
+            label="Keep screen awake"
+            description="Stop the screen from dimming while the timer is open"
+          >
+            <button
+              onClick={() =>
+                updateSettings({ keepAwake: !settings.keepAwake })
+              }
+              className={`px-3 py-1 rounded text-sm ${
+                settings.keepAwake
+                  ? "bg-primary/20 text-primary"
+                  : "bg-surface-hover"
+              }`}
+            >
+              {settings.keepAwake ? "On" : "Off"}
+            </button>
+          </SettingRow>
         </div>
       </section>
 

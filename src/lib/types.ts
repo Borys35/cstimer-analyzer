@@ -78,6 +78,8 @@ export interface TimerSettings {
   zenMode: boolean;
   /** "timer" = built-in stackmat-style timer; "typing" = enter times from an external timer. */
   inputMode: InputMode;
+  /** Hold a screen wake lock while the timer page is open. */
+  keepAwake: boolean;
 }
 
 export type InputMode = "timer" | "typing";
@@ -96,6 +98,7 @@ export const DEFAULT_SETTINGS: TimerSettings = {
   hideTimer: false,
   zenMode: false,
   inputMode: "timer",
+  keepAwake: true,
 };
 
 export interface StorageAdapter {

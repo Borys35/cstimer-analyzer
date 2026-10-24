@@ -34,3 +34,4 @@
 - **SolveTable**: `<table>` with columns #, Time, Ao5, Ao12. Click opens SolveDetailModal.
 - **SolveDetailModal**: Shows time, date, scramble, +2/DNF/delete controls. +2 and DNF are mutually exclusive — toggling one clears the other.
 - **TimerPage**: Centered scramble display with prev/next arrows, timer (or typed-time input), phase label, and a top-right toolbar for input mode and zen mode. The next arrow generates a fresh scramble once the session's history is exhausted.
+- **Start pad**: on touch devices, the visible area of the timer screen where a hold arms the timer. Only holds that begin inside it start a solve; stopping a running solve is not limited to it. Not shown in typing mode or on keyboard/mouse devices.

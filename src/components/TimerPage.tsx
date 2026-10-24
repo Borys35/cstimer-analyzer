@@ -7,6 +7,7 @@ import { formatTimerTime, formatTypedInput, parseTypedTime } from "@/lib/timer-u
 import { playStartBeep, playStopBeep } from "@/lib/sound";
 import { useMenu } from "@/components/MenuContext";
 import { useTimerPhase } from "@/components/TimerPhaseContext";
+import { useWakeLock } from "@/lib/use-wake-lock";
 
 /** Touches starting on these never arm the timer — they're normal taps. */
 const NO_TIMER_SELECTOR = "button, a, input, select, textarea, [data-no-timer]";
@@ -60,6 +61,9 @@ export default function TimerPage() {
     publishPhase(phase);
   }, [phase, publishPhase]);
 
+  // Long scrambles mean long stretches without a touch; don't let the screen sleep.
+  useWakeLock(settings.keepAwake);
+
   useEffect(() => {
     if (zen) setMobileOpen(false);
   }, [zen, setMobileOpen]);
@@ -101,6 +105,8 @@ export default function TimerPage() {
   // Touch: native non-passive listeners so preventDefault() can suppress
   // ghost clicks, double-tap zoom and long-press menus.
   const padRef = useRef<HTMLDivElement>(null);
+  /** When the start pad is rendered, only holds that begin inside it arm the timer. */
+  const startPadRef = useRef<HTMLDivElement>(null);
   const touchRef = useRef<{ id: number; x: number; y: number } | null>(null);
   const handlersRef = useRef({ phase, handleKeyDown, handleKeyUp, cancelArm });
   handlersRef.current = { phase, handleKeyDown, handleKeyUp, cancelArm };
@@ -126,6 +132,8 @@ export default function TimerPage() {
       }
       const target = e.target as Element | null;
       if (target?.closest(NO_TIMER_SELECTOR)) return;
+      const startPad = startPadRef.current;
+      if (startPad && !(target && startPad.contains(target))) return;
       e.preventDefault();
       const t = e.changedTouches[0];
       touchRef.current = { id: t.identifier, x: t.clientX, y: t.clientY };
@@ -201,10 +209,10 @@ export default function TimerPage() {
         ? "Solving..."
         : phase === "inspection"
           ? coarsePointer
-            ? "Inspecting... hold to start"
+            ? "Inspecting... hold here to start"
             : "Inspecting... hold space to start"
           : coarsePointer
-            ? "Hold to start"
+            ? "Hold here to start"
             : "Press spacebar to start";
 
   const [holdMs, setHoldMs] = useState(0);
@@ -245,6 +253,16 @@ export default function TimerPage() {
 
   const isActive = phase === "armed" || phase === "running" || phase === "inspection";
 
+  const showStartPad = coarsePointer && !typing;
+  const startPadState =
+    phase === "running"
+      ? "running"
+      : phase === "armed"
+        ? holdMs >= settings.startDelayMs
+          ? "ready"
+          : "holding"
+        : "idle";
+
   // --- Typing mode ---
   const [typed, setTyped] = useState("");
   const [typedError, setTypedError] = useState(false);
@@ -267,13 +285,31 @@ export default function TimerPage() {
     typedInputRef.current?.focus();
   };
 
+  const timerDisplay = (
+    <div
+      className="text-7xl sm:text-8xl md:text-9xl font-mono font-bold tracking-tight cursor-pointer transition-colors"
+      style={{ color: timerColor }}
+      data-testid="timer-display"
+    >
+      {timerText}
+    </div>
+  );
+
+  const sessionInfo = (
+    <div className="mt-8 text-base opacity-30">
+      {puzzleType} &middot; {activeSession?.name ?? "No session"}
+    </div>
+  );
+
   const toolbarBtn =
     "p-2 rounded opacity-50 hover:opacity-100 hover:bg-[var(--surface-3)] transition-opacity";
 
   return (
     <div
       ref={padRef}
-      className="timer-pad flex flex-col items-center justify-center h-full select-none relative px-4 sm:px-12"
+      className={`timer-pad flex flex-col items-center h-full select-none relative px-4 sm:px-12 ${
+        showStartPad ? "pt-14 pb-4" : "justify-center"
+      }`}
     >
       {!zen && (
         <button
@@ -330,7 +366,10 @@ export default function TimerPage() {
         </button>
       </div>
 
-      <div data-no-timer className="flex items-center gap-1 sm:gap-3 mb-6 sm:mb-8 w-full max-w-4xl">
+      <div
+        data-no-timer
+        className={`flex items-center gap-1 sm:gap-3 w-full max-w-4xl shrink-0 ${showStartPad ? "mb-4" : "mb-6 sm:mb-8"}`}
+      >
         <button
           onClick={prevScramble}
           disabled={scrambleIndex === 0 || isActive}
@@ -343,7 +382,7 @@ export default function TimerPage() {
         </button>
         <div
           suppressHydrationWarning
-          className="text-lg sm:text-[28px] md:text-[36px] font-medium opacity-70 text-center whitespace-pre-wrap leading-snug tracking-[0.08em] sm:tracking-[0.15em] flex-1 min-w-0 break-words"
+          className="text-lg sm:text-[28px] md:text-[36px] font-medium opacity-70 text-center whitespace-pre-wrap leading-snug tracking-[0.08em] sm:tracking-[0.15em] flex-1 min-w-0 break-words max-h-[35vh] overflow-y-auto"
         >
           {scramble}
         </div>
@@ -391,23 +430,31 @@ export default function TimerPage() {
             Save
           </button>
         </form>
+      ) : showStartPad ? (
+        <div
+          ref={startPadRef}
+          className="start-pad flex-1 min-h-0 w-full max-w-4xl flex flex-col items-center justify-center px-2"
+          data-state={startPadState}
+          data-testid="start-pad"
+        >
+          {(phase === "idle" || phase === "inspection") && (
+            <svg className="w-10 h-10 mb-3 opacity-30" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
+              <circle cx="12" cy="12" r="3.5" fill="currentColor" stroke="none" />
+              <circle cx="12" cy="12" r="8" strokeWidth={1.5} />
+            </svg>
+          )}
+          {timerDisplay}
+          <div className="text-xl opacity-40 mt-4 text-center">{phaseLabel}</div>
+          {sessionInfo}
+        </div>
       ) : (
         <>
-          <div
-            className="text-7xl sm:text-8xl md:text-9xl font-mono font-bold tracking-tight cursor-pointer transition-colors"
-            style={{ color: timerColor }}
-            data-testid="timer-display"
-          >
-            {timerText}
-          </div>
-
+          {timerDisplay}
           <div className="text-xl opacity-40 mt-4">{phaseLabel}</div>
         </>
       )}
 
-      <div className="mt-8 text-base opacity-30">
-        {puzzleType} &middot; {activeSession?.name ?? "No session"}
-      </div>
+      {!showStartPad && sessionInfo}
     </div>
   );
 }

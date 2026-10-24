@@ -240,13 +240,13 @@ box-shadow:
 
 Full-height centered layout. Elements stacked vertically:
 
-1. **Scramble**: `text-lg sm:text-[28px] md:text-[36px] font-medium opacity-70`, max-w-4xl, centered, wraps (`min-w-0 break-words`)
+1. **Scramble**: `text-lg sm:text-[28px] md:text-[36px] font-medium opacity-70`, max-w-4xl, centered, wraps (`min-w-0 break-words`). Capped at `max-h-[35vh]` and scrolls inside itself, so long (6x6/7x7) scrambles can't squeeze the timer
 2. **Timer display**: `text-7xl sm:text-8xl md:text-9xl font-mono font-bold`, color varies by phase:
    - idle: `var(--text)` (default)
    - armed (hold < threshold): `var(--red)`
    - armed (hold ≥ threshold): `var(--green)`
    - running with blind mode: shows "Solving..." instead of time
-3. **Phase label**: `text-xl opacity-40` — "Hold to start" on coarse pointers, "Press spacebar to start" otherwise
+3. **Phase label**: `text-xl opacity-40` — "Hold here to start" on coarse pointers, "Press spacebar to start" otherwise
 4. **Info line**: `text-base opacity-30` (puzzle type · session name)
 5. **Hamburger button**: `absolute top-3 left-3`, mobile only, disabled during solve, hidden in zen mode
 6. **Toolbar**: `absolute top-3 right-3` — input-mode toggle (timer ↔ typing) and zen toggle; fades out (`opacity-0 pointer-events-none`) while armed/running/inspecting
@@ -255,7 +255,18 @@ Full-height centered layout. Elements stacked vertically:
 
 **Zen mode** (`settings.zenMode`) unmounts the session sidebar and hides the hamburger.
 
-**Touch surface** (`.timer-pad`): native non-passive touch listeners. Touches starting on buttons, inputs or `[data-no-timer]` (scramble row, toolbar) never arm. Multi-touch and drift beyond 12px cancel an arm. While running, any touch stops. CSS sets `touch-action: manipulation`, no callout, no tap highlight.
+**Start pad** (`.start-pad`, coarse pointer + timer mode only): the layout switches from centered to top-aligned (`pt-14 pb-4`, clearing the hamburger/toolbar). Below the scramble row a `flex-1` rounded box (`border-radius: 1rem`, 2px border) holds the timer display, phase label and info line. Look is driven by `data-state`:
+
+- `idle` (also during inspection): dashed `--border`, `--surface` at 70%, tap-target icon above the time
+- `holding` (armed, hold < threshold): solid `--red` border, `--red` 12% fill
+- `ready` (armed, hold ≥ threshold): solid `--green` border, `--green` 14% fill
+- `running`: border and fill transparent
+
+Border/fill transition 0.15s, disabled under reduced motion. Not rendered in typing mode or on fine pointers.
+
+**Keep screen awake** (`settings.keepAwake`, default on): `useWakeLock` holds a Screen Wake Lock while the timer page is mounted, re-requesting it when the tab becomes visible again. Silently skipped where the API is missing or the request is denied.
+
+**Touch surface** (`.timer-pad`): native non-passive touch listeners. Touches starting on buttons, inputs or `[data-no-timer]` (scramble row, toolbar) never arm. When the start pad is rendered, only touches that begin inside it arm. Multi-touch and drift beyond 12px cancel an arm. While running, any touch stops. CSS sets `touch-action: manipulation`, no callout, no tap highlight.
 
 ### Session sidebar
 
@@ -448,6 +459,7 @@ The `.score-hero` layout is the only component using custom CSS for responsive b
 | `src/app/page.tsx`                     | Timer page layout — sidebar + timer, auto-collapse logic           |
 | `src/lib/theme.ts`                     | Theme type, localStorage persistence, chart palette reader         |
 | `src/lib/use-timer.ts`                 | Timer phase machine, scramble generation, keyboard/touch handlers  |
+| `src/lib/use-wake-lock.ts`             | Screen Wake Lock while the timer page is open                      |
 | `src/lib/types.ts`                     | TimerSettings, TimerSession, TimerSolve types                      |
 | `src/components/TimerPage.tsx`         | Timer display, scramble, blind mode, hamburger button              |
 | `src/components/TimerPhaseContext.tsx` | Shares timer phase between TimerPage and page layout               |
